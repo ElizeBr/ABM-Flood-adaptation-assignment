@@ -73,4 +73,16 @@ class Government(Agent):
         # The government agent doesn't perform any actions.
         pass
 
+# define Insurance agent
+class Insurance(Agent):
+    """
+    An insurance agent that currently doesn't perform any actions.
+    """
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+
+    def step(self):
+        # The insurance agent doesn't perform any actions yet.
+        pass
+
 # More agent classes can be added here, e.g. for insurance agents.
