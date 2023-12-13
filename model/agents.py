@@ -8,7 +8,6 @@ from shapely import contains_xy
 from functions import generate_random_location_within_map_domain, get_flood_depth, calculate_basic_flood_damage
 from functions import floodplain_multipolygon
 
-discount_rate= 0.98
 
 # Define the Households agent class
 class Households(Agent):
@@ -65,6 +64,8 @@ class Households(Agent):
 
         self.convincing = 0.3
 
+        self.discount_rate = 0.98
+
     # Function to count friends who can be influencial.
     def count_friends(self, radius):
         """Count the number of neighbors within a given radius (number of edges away). This is social relation and not spatial"""
@@ -81,7 +82,7 @@ class Households(Agent):
         neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
         print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
         for neighbor in neighbors:
-            self.flood_perception = discount_rate * self.flood_perception * (1 - neighbor.influence_factor) + neighbor.influence_factor * neighbor.flood_perception
+            self.flood_perception = self.discount_rate* self.flood_perception * (1 - neighbor.influence_factor) + neighbor.influence_factor * neighbor.flood_perception
         print(self.flood_perception)
 
      #def reconsider_adaptation_measures(self):
