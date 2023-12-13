@@ -67,9 +67,6 @@ class Households(Agent):
     def save_money(self):
         self.money_saved += self.income
 
-    def save_money(self):
-        self.savings += self.income
-        print(self.savings)
 
     def influence_neighbors(self, influence_factor):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
