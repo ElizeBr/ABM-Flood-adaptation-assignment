@@ -84,6 +84,7 @@ floodplain_geoseries = floodplain_gdf['geometry']
 floodplain_multipolygon = floodplain_geoseries[0]  # The geoseries contains only one multipolygon
 prepare(floodplain_multipolygon)
 
+
 def generate_random_location_within_map_domain():
     """
     Generate random location coordinates within the map domain polygon.

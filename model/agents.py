@@ -66,7 +66,7 @@ class Households(Agent):
 
         self.discount_rate = 0.98
 
-    # Function to count friends who can be influencial.
+    # Function to count friends who can be influential.
     def count_friends(self, radius):
         """Count the number of neighbors within a given radius (number of edges away). This is social relation and not spatial"""
         friends = self.model.grid.get_neighborhood(self.pos, include_center=False, radius=radius)
