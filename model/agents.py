@@ -58,6 +58,8 @@ class Households(Agent):
 
         self.taken_measures = 50
 
+        self.money_saved = 30
+
     # Function to count friends who can be influencial.
     def count_friends(self, radius):
         """Count the number of neighbors within a given radius (number of edges away). This is social relation and not spatial"""
@@ -70,7 +72,8 @@ class Households(Agent):
 
     def influence_neighbors(self, influence_factor):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-
+        neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
+        print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
         for neighbor in neighbors:
             self.flood_perception *= influence_factor
 
@@ -80,13 +83,12 @@ class Households(Agent):
 
 
     def step(self):
-        # Logic for adaptation based on estimated flood damage and a random chance.
-        # These conditions are examples and should be refined for real-world applications.
-        # self.save_money()
         # hier mogelijk if functie op basis van attributen hoe overtuigend en eigen perception
         print("Hi, I am agent " + str(self.unique_id) + ".")
+        self.save_money()
         self.influence_neighbors(influence_factor=0.8)
         print(f"{self.unique_id}: {self.flood_perception}")
+        # Logic for adaptation based on estimated flood damage and a random chance.
         if self.flood_damage_estimated > 0.15 and random.random() < 0.2:
             self.is_adapted = True  # Agent adapts to flooding
 
