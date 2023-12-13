@@ -12,6 +12,7 @@ from shapely import contains_xy
 from shapely import prepare
 import geopandas as gpd
 
+
 def set_initial_values(input_data, parameter, seed):
     """
     Function to set the values based on the distribution shown in the input data for each parameter.
@@ -19,7 +20,7 @@ def set_initial_values(input_data, parameter, seed):
     
     Parameters
     ----------
-    input_data: the dataframe containing the distribution of paramters
+    input_data: the dataframe containing the distribution of parameters
     parameter: parameter name that is to be set
     seed: agent's seed
     
@@ -121,7 +122,7 @@ def get_flood_depth(corresponding_map, location, band):
 
 def get_position_flood(bound_l, bound_r, bound_t, bound_b, img, seed):
     """ 
-    To generater the position on flood map for a household.
+    To generate the position on flood map for a household.
     Households are placed randomly on the map, so the distribution does not follow reality.
     
     Parameters
@@ -162,4 +163,3 @@ def calculate_basic_flood_damage(flood_depth):
         # see flood_damage.xlsx for function generation
         flood_damage = 0.1746 * math.log(flood_depth) + 0.6483
     return flood_damage
-

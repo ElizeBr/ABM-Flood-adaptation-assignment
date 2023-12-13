@@ -1,7 +1,7 @@
 # Importing necessary libraries
 import networkx as nx
 from mesa import Model, Agent
-from mesa.time import RandomActivation
+from mesa.time import RandomActivation, SimultaneousActivation
 from mesa.space import NetworkGrid
 from mesa.datacollection import DataCollector
 import geopandas as gpd
