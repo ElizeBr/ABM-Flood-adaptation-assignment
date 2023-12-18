@@ -50,21 +50,28 @@ class Households(Agent):
         # calculate the actual flood damage given the actual flood depth. Flood damage is a factor between 0 and 1
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
 
+        self.discount_rate = 0.98
+
+        self.size_of_house = 1000
+
         self.income = 2
 
-        self.savings = 20
+        self.self_efficacy = 1
 
-        self.flood_perception = 0.8
+        self.previous_flood_experience = 2
 
-        self.taken_measures = 50
+        self.perceived_flood_probability = 9
 
         self.money_saved = 30
 
         self.influence_factor = 0.1
 
-        self.convincing = 0.3
-
-        self.discount_rate = 0.98
+        self.taken_measures = 50
+        self.taken_measures_list = []
+        self.flood_worry = 0.8
+        self.perceived_costs_of_measures = 20
+        self.perceived_effectiveness_of_measures = 5
+        self.desire_to_take_measures = False
 
     # Function to count friends who can be influential.
     def count_friends(self, radius):
@@ -74,36 +81,69 @@ class Households(Agent):
 
     def save_money(self):
         self.money_saved += self.income
-        print(self.money_saved)
 
-
-    def influenced_by_neighbors(self, influence_factor):
+    # worry
+    def flood_worry_influenced_by_neighbors(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
         neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
         print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
         for neighbor in neighbors:
-            self.flood_perception = self.discount_rate* self.flood_perception * (1 - neighbor.influence_factor) + neighbor.influence_factor * neighbor.flood_perception
-        print(self.flood_perception)
+            self.flood_worry = (
+                        self.discount_rate * self.flood_worry * (1 - neighbor.influence_factor) +
+                        neighbor.influence_factor * neighbor.flood_worry)
 
-     #def reconsider_adaptation_measures(self):
-           # if self.flood_perception <0.2 and self.taken_measures:
-             #self
+    def perceived_costs_of_measures_influenced_by_neighbors(self):
 
-     #def take_adaptation_measures(self):
+        neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
+        for neighbor in neighbors:
+            self.perceived_costs_of_measures = (self.perceived_costs_of_measures * (1 - neighbor.influence_factor) +
+                                                neighbor.influence_factor * neighbor.perceived_costs_of_measures)
 
+    def construct_perceived_flood_damage(self):
+        self.perceived_flood_damage = self.size_of_house*self.flood_damage_estimated
+        neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
+        for neighbor in neighbors:
+            self.perceived_flood_damage = (
+                        self.perceived_flood_damage * (1 - neighbor.influence_factor) +
+                        neighbor.influence_factor * neighbor.perceived_flood_damage)
+
+    def perceived_effectiveness_of_measures_influenced_by_neighbors(self):
+        #hoeveel bespaard is per geinvesteerd geld in measures (negatief wanneer kosten van investering hoger zijn dan besparing)
+        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage - self.perceived_costs_of_measures)/
+                                                    self.perceived_costs_of_measures)
+
+        neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
+        for neighbor in neighbors:
+            self.perceived_effectiveness_of_measures = (self.perceived_effectiveness_of_measures * (1 - neighbor.influence_factor) +
+                                                neighbor.influence_factor * neighbor.perceived_effectiveness_of_measures)
+
+   # def reconsider_adaptation_measures(self):
+        #if self.perceived_effectiveness_of_measures < 0:
+           # return
+
+
+
+       # self.desire_to_take_measures = True
+
+    def take_adaptation_measures(self):
+        if self.desire_to_take_measures == True:
+            structural_measures = ["Sandbags", "hi", "i", "ko", "pfi"]
+            non_structural_measures = ["..", "..", "..", "..", "..."]
+
+            new_measure = random.choice (structural_measures)
+            self.taken_measures_list += new_measure
+            self.taken_measures += 1
 
     def step(self):
-        # hier mogelijk if functie op basis van attributen hoe overtuigend en eigen perception
         print("Hi, I am agent " + str(self.unique_id) + ".")
         self.save_money()
-        self.influenced_by_neighbors(self.influence_factor)
-        print(f"{self.unique_id}: {self.flood_perception}")
-        #self.reconsider_adaptation_measures()
+        self.flood_worry_influenced_by_neighbors()
+        # self.reconsider_adaptation_measures()
         #self.take_adaptation_measures ()
-        # Logic for adaptation based on estimated flood damage and a random chance.
+        # Logic for adaptation based on estimated flood damage and a random chance. --> dit wordt
+        # uiteindelijk vervangen door self.take_adaptation_measures
         if self.flood_damage_estimated > 0.15 and random.random() < 0.2:
             self.is_adapted = True  # Agent adapts to flooding
-
 
 
 # Define the Government agent class
@@ -115,17 +155,27 @@ class Government(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
+        self
+
     def step(self):
         # The government agent doesn't perform any actions.
         pass
+
 
 # define Insurance agent
 class Insurance(Agent):
     """
     An insurance agent that currently doesn't perform any actions.
     """
+
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
+
+        self.information = 0
+        self.subsidies = 0
+        self.regulations = 0
+        self.infrastructure = 0
+
 
     def step(self):
         # The insurance agent doesn't perform any actions yet.

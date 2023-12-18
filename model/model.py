@@ -90,6 +90,7 @@ class AdaptationModel(Model):
                         "IsAdapted": "is_adapted",
                         "FriendsCount": lambda a: a.count_friends(radius=1),
                         "location":"location",
+                        #"FloodMeasures" : self.taken_measures_list
                         # ... other reporters ...
                         }
         #set up the data collector 
