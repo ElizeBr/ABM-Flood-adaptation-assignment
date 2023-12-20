@@ -163,4 +163,6 @@ def calculate_basic_flood_damage(flood_depth):
     else:
         # see flood_damage.xlsx for function generation
         flood_damage = 0.1746 * math.log(flood_depth) + 0.6483
+        #flood_damage_without_measures = 0.1746 * math.log(flood_depth) + 0.6483
+        #flood_damage = flood_damage_without_measures*(1-self.taken_measures)
     return flood_damage
