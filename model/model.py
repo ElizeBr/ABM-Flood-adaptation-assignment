@@ -45,7 +45,8 @@ class AdaptationModel(Model):
                  ):
         
         super().__init__(seed = seed)
-        
+
+        self.total_damage = 0
         # defining the variables and setting the values
         self.number_of_households = number_of_households  # Total number of household agents
         self.seed = seed
@@ -187,6 +188,17 @@ class AdaptationModel(Model):
         assume local flooding instead of global flooding). The actual flood depth can be 
         estimated differently
         """
+        #opzet voor functie om totale schade bij een flooding te berekenen, kan uiteindelijk geintegreeerd worden in de if functie hieronder
+        for agent in self.schedule.agents:
+            # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
+            agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
+            # calculate the actual flood damage given the actual flood depth
+            agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
+            agent.flood_damage_monetary_value = agent.flood_damage_actual*self.max_damage_dol_per_sqm
+            self.total_damage += agent.flood_damage_monetary_value
+        print(self.total_damage)
+
+
         if self.schedule.steps == 5:
             for agent in self.schedule.agents:
                 # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth

@@ -51,21 +51,22 @@ class Households(Agent):
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
 
         self.discount_rate = 0.98
-        self.elevation_costs_per_square_metre = 220.982
+        self.elevation_costs_per_square_metre = 220.982  # argumented in report
+        self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
 
         # range around average house size (159.14 square meters)
         self.size_of_house = random.randrange(120, 200)
         # range around average quarterly income (17078)
         self.income = random.randrange(13000, 22000)
-
+        # start value of saved money (we could also randomize the 1.8)
         self.money_saved = self.income * 1.8
 
-        self.trust_factor = 0.1
+        self.trust_factor = random.uniform(0,0.1)
 
-        self.taken_measures = 50
+        self.taken_measures = random.random()
         self.taken_measures_list = []
-        self.perceived_flood_probability = 0.8
-        self.perceived_costs_of_measures = 20
+        self.perceived_flood_probability = random.random()
+        self.perceived_costs_of_measures = self.elevation_costs_per_square_metre * self.size_of_house
         self.perceived_flood_damage = None
         self.perceived_effectiveness_of_measures = 5
         self.desire_to_take_measures = False
@@ -77,30 +78,48 @@ class Households(Agent):
         return len(friends)
 
     def save_money(self):
-        #print("Money before savings:" + str(self.money_saved))
-        #print("Income" + str(self.income))
+        # print("Money before savings:" + str(self.money_saved))
+        # print("Income" + str(self.income))
         self.money_saved += self.income * 0.05  # assumming that 5% of income are savings
-        #print("Money saved: " + str(self.money_saved))
+        # print("Money saved: " + str(self.money_saved))
 
     def construct_perceived_flood_probability(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-        # uncomment to print id's of the neighbors
+
         # neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
         # print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
+
+        # @ Fin, discount rate moet voor de for-loop, want nu wordt de discount rate afgetrokken voor elke neighbour,
+        # en het moet maar 1 keer per ronde
+
         for neighbor in neighbors:
             self.perceived_flood_probability = (
                     self.discount_rate * self.perceived_flood_probability * (1 - neighbor.trust_factor) +
                     neighbor.trust_factor * neighbor.perceived_flood_probability)
 
+        # TO DO: write part of function where perceived flood probability is influenced by government.
+        # Bij government agent optie maken om de floodwarning op 1 van deze 3 waardes te zetten en dat heeft bepaalde invloed op perceived_flood_probability
+        # weet zelf even niet hoe dit codetechnisch moet, variabele vanuit andere agent
+        # Ik wil dat deze waarde bij de eerste timestep gelijk erbij wordt opgeteld en daarna niet meer. Op deze manier blijft de perceived flood probability niet oneindig stijgen. Ik weet alleen niet hoe dit moet
+        # if government.flood_warning = "Low":
+            #self.perceived_flood_probability = self.perceived_flood_probability + 0
+
+        # elif government.flood_warning = "Medium":
+            #self.perceived_flood_probability = self.perceived_flood_probability + 0.2
+        # elif government.flood_warning = "High":
+            # self.perceived_flood_probability = self.perceived_flood_probability + 0.4
+
     def construct_perceived_costs_of_measures(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
+
         for neighbor in neighbors:
             self.perceived_costs_of_measures = (self.perceived_costs_of_measures * (1 - neighbor.trust_factor) +
                                                 neighbor.trust_factor * neighbor.perceived_costs_of_measures)
 
+        # TO DO: write part of function where perceived costs of measures is influenced by government
+        # kan soortgelijk iets als bij flood_probability gedaan worden
     def construct_perceived_flood_damage(self):
-        # 1216.65 is max damage per square meter, self.flood_damage_estimated is factor between 0 and 1
-        self.perceived_flood_damage = self.size_of_house * self.flood_damage_estimated * 1216.65
+        self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
         # print("Flood depth:" + str(self.flood_depth_estimated))
         # print("Flood damage:" + str(self.perceived_flood_damage))
 
@@ -114,10 +133,14 @@ class Households(Agent):
         # building block where household takes into account the fine of the government if it doesnt adapt
 
     def reconsider_adaptation_measures(self):
-        if self.perceived_effectiveness_of_measures < 0:
-            return
+        if self.perceived_flood_probability > 0.4 and random.random() > 0.3:
+            if self.perceived_effectiveness_of_measures < 1 and random.random() > 0.3:
+        # of ipv de if functies kunnen we een soort formule schrijven
+                self.desire_to_take_measures = True
+            else:
+                return
         else:
-            self.desire_to_take_measures = True
+            return
 
     def take_adaptation_measures(self):
         if self.taken_measures < 1 and self.desire_to_take_measures == True:
@@ -148,6 +171,7 @@ class Households(Agent):
         # self.take_adaptation_measures ()
 
         # Logic for adaptation based on estimated flood damage and a random chance.
+        # dit kan wel weggehaald worden
         if self.flood_damage_estimated > 0.15 and random.random() < 0.2:
             self.is_adapted = True  # Agent adapts to flooding
 
@@ -161,7 +185,10 @@ class Government(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
-        self
+        self.flood_warning = "Low"
+        self.subsidies = 0
+        self.regulations = 0
+        self.infrastructure = 0
 
     def step(self):
         # The government agent doesn't perform any actions.
@@ -176,11 +203,6 @@ class Insurance(Agent):
 
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
-
-        self.information = 0
-        self.subsidies = 0
-        self.regulations = 0
-        self.infrastructure = 0
 
     def step(self):
         # The insurance agent doesn't perform any actions yet.
