@@ -89,25 +89,14 @@ class Households(Agent):
         # neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
         # print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
 
-        # @ Fin, discount rate moet voor de for-loop, want nu wordt de discount rate afgetrokken voor elke neighbour,
-        # en het moet maar 1 keer per ronde
-
+        # @ Finn, discount rate moet voor de for-loop, want nu wordt de discount rate afgetrokken voor elke neighbour,
+        # en het moet maar 1 keer per ronde --- Finn: gefixt
+        self.perceived_flood_probability = self.discount_rate * self.perceived_flood_probability  #waarom ervoor? -> verslag
         for neighbor in neighbors:
             self.perceived_flood_probability = (
-                    self.discount_rate * self.perceived_flood_probability * (1 - neighbor.trust_factor) +
+                    self.perceived_flood_probability * (1 - neighbor.trust_factor) +
                     neighbor.trust_factor * neighbor.perceived_flood_probability)
-
-        # TO DO: write part of function where perceived flood probability is influenced by government.
-        # Bij government agent optie maken om de floodwarning op 1 van deze 3 waardes te zetten en dat heeft bepaalde invloed op perceived_flood_probability
-        # weet zelf even niet hoe dit codetechnisch moet, variabele vanuit andere agent
-        # Ik wil dat deze waarde bij de eerste timestep gelijk erbij wordt opgeteld en daarna niet meer. Op deze manier blijft de perceived flood probability niet oneindig stijgen. Ik weet alleen niet hoe dit moet
-        # if government.flood_warning = "Low":
-            #self.perceived_flood_probability = self.perceived_flood_probability + 0
-
-        # elif government.flood_warning = "Medium":
-            #self.perceived_flood_probability = self.perceived_flood_probability + 0.2
-        # elif government.flood_warning = "High":
-            # self.perceived_flood_probability = self.perceived_flood_probability + 0.4
+            #government doet ook hier iets voor, maar dan in de government agent
 
     def construct_perceived_costs_of_measures(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
@@ -116,7 +105,6 @@ class Households(Agent):
             self.perceived_costs_of_measures = (self.perceived_costs_of_measures * (1 - neighbor.trust_factor) +
                                                 neighbor.trust_factor * neighbor.perceived_costs_of_measures)
 
-        # TO DO: write part of function where perceived costs of measures is influenced by government
         # kan soortgelijk iets als bij flood_probability gedaan worden
     def construct_perceived_flood_damage(self):
         self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
@@ -133,14 +121,20 @@ class Households(Agent):
         # building block where household takes into account the fine of the government if it doesnt adapt
 
     def reconsider_adaptation_measures(self):
-        if self.perceived_flood_probability > 0.4 and random.random() > 0.3:
-            if self.perceived_effectiveness_of_measures < 1 and random.random() > 0.3:
-        # of ipv de if functies kunnen we een soort formule schrijven
-                self.desire_to_take_measures = True
-            else:
-                return
-        else:
-            return
+        # if self.perceived_flood_probability > 0.4 and random.random() > 0.3: #waarom hier een random functie?
+        #     if self.perceived_effectiveness_of_measures < 1 and random.random() > 0.3:
+        # # of ipv de if functies kunnen we een soort formule schrijven
+        #         self.desire_to_take_measures = True
+        #     else:
+        #         return
+        # else:
+        #     return
+        consideration_period = 10
+        fine = 0.5
+        treshold = 5
+        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures - fine  >= treshold:
+            self.desire_to_take_measures = True
+
 
     def take_adaptation_measures(self):
         if self.taken_measures < 1 and self.desire_to_take_measures == True:
@@ -189,6 +183,22 @@ class Government(Agent):
         self.subsidies = 0
         self.regulations = 0
         self.infrastructure = 0
+
+    def warn_households(self, schedule_of_households): #gebruik een list van de households, schedule voor volgorde.
+        flood_warning_effectiveness = 0
+        if government.flood_warning == "Low":
+            flood_warning_effectiveness = 0
+        elif government.flood_warning == "Medium":
+            flood_warning_effectiveness = 0.2
+        elif government.flood_warning == "High":
+            flood_warning_effectiveness = 0.4
+
+        # Zelfde for loop als bij de households, moet nog wel gecheckt worden welke waarden er goed bij passen
+        for agent in schedule_of_households:
+            if isinstance(agent, Households):
+                agent.perceived_flood_probability = (
+                    agent.perceived_flood_probability * (1 - flood_warning_effectiveness) +
+                    flood_warning_effectiveness)
 
     def step(self):
         # The government agent doesn't perform any actions.
