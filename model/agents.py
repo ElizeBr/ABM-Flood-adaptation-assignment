@@ -129,10 +129,9 @@ class Households(Agent):
         #         return
         # else:
         #     return
-        consideration_period = 10
-        fine = 0.5
+        fine = 0.5 # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
         treshold = 5
-        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures - fine  >= treshold:
+        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + fine  >= treshold:
             self.desire_to_take_measures = True
 
 
