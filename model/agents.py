@@ -17,7 +17,7 @@ class Households(Agent):
     In a real scenario, this would be based on actual geographical data or more complex logic.
     """
 
-    def __init__(self, unique_id, model):
+    def __init__(self, unique_id, model, fine=0):
         super().__init__(unique_id, model)
         self.is_adapted = False  # Initial adaptation status set to False
 
@@ -62,7 +62,7 @@ class Households(Agent):
         self.money_saved = self.income * 1.8
 
         self.trust_factor = random.uniform(0,0.1)
-
+        self.fine = fine
         self.taken_measures = random.random()
         self.taken_measures_list = []
         self.perceived_flood_probability = random.random()
@@ -93,9 +93,10 @@ class Households(Agent):
         # en het moet maar 1 keer per ronde --- Finn: gefixt
         self.perceived_flood_probability = self.discount_rate * self.perceived_flood_probability  #waarom ervoor? -> verslag
         for neighbor in neighbors:
-            self.perceived_flood_probability = (
-                    self.perceived_flood_probability * (1 - neighbor.trust_factor) +
-                    neighbor.trust_factor * neighbor.perceived_flood_probability)
+            if isinstance(neighbor, Households):
+                self.perceived_flood_probability = (
+                        self.perceived_flood_probability * (1 - neighbor.trust_factor) +
+                        neighbor.trust_factor * neighbor.perceived_flood_probability)
             #government doet ook hier iets voor, maar dan in de government agent
 
     def construct_perceived_costs_of_measures(self):
@@ -129,10 +130,13 @@ class Households(Agent):
         #         return
         # else:
         #     return
-        fine = 0.5 # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
+        # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
         treshold = 5
-        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + fine  >= treshold:
+        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
             self.desire_to_take_measures = True
+        else:
+            self.desire_to_take_measures = False
+
 
 
     def take_adaptation_measures(self):
@@ -175,21 +179,23 @@ class Government(Agent):
     A government agent that currently doesn't perform any actions.
     """
 
-    def __init__(self, unique_id, model):
+    def __init__(self, unique_id, model,fine = 0):
         super().__init__(unique_id, model)
 
         self.flood_warning = "Low"
         self.subsidies = 0
-        self.regulations = 0
+        self.regulations = 0.4
         self.infrastructure = 0
-
+        loc_x, loc_y = generate_random_location_within_map_domain()
+        self.location = Point(loc_x, loc_y)
+        self.fine = fine
     def warn_households(self, schedule_of_households): #gebruik een list van de households, schedule voor volgorde.
         flood_warning_effectiveness = 0
-        if government.flood_warning == "Low":
+        if self.flood_warning == "Low":
             flood_warning_effectiveness = 0
-        elif government.flood_warning == "Medium":
+        elif self.flood_warning == "Medium":
             flood_warning_effectiveness = 0.2
-        elif government.flood_warning == "High":
+        elif self.flood_warning == "High":
             flood_warning_effectiveness = 0.4
 
         # Zelfde for loop als bij de households, moet nog wel gecheckt worden welke waarden er goed bij passen
@@ -198,6 +204,18 @@ class Government(Agent):
                 agent.perceived_flood_probability = (
                     agent.perceived_flood_probability * (1 - flood_warning_effectiveness) +
                     flood_warning_effectiveness)
+
+    def count_friends(self, radius):
+        #to fix the reporting
+        return None
+    def check_certification(self, household):
+        if household.taken_measures >= self.regulations:
+            return True
+        else:
+            return False
+
+    def fine_household(self, household):
+        household.money_saved -= self.fine
 
     def step(self):
         # The government agent doesn't perform any actions.
@@ -218,3 +236,4 @@ class Insurance(Agent):
         pass
 
 # More agent classes can be added here, e.g. for insurance agents.
+

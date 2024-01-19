@@ -11,6 +11,7 @@ import random
 
 # Import the agent class(es) from agents.py
 from agents import Households
+from agents import Government
 
 # Import functions from functions.py
 from functions import get_flood_map_data, calculate_basic_flood_damage
@@ -42,6 +43,7 @@ class AdaptationModel(Model):
                  number_of_edges = 3,
                  # number of nearest neighbours for WS social network
                  number_of_nearest_neighbours = 5,
+                 fine = 1
                  ):
         
         super().__init__(seed = seed)
@@ -51,7 +53,7 @@ class AdaptationModel(Model):
         self.number_of_households = number_of_households  # Total number of household agents
         self.seed = seed
         self.max_damage_dol_per_sqm = max_damage_dol_per_sqm
-
+        self.fine=fine
         # network
         self.network = network # Type of network to be created
         self.probability_of_network_connection = probability_of_network_connection
@@ -71,9 +73,13 @@ class AdaptationModel(Model):
 
         # create households through initiating a household on each node of the network graph
         for i, node in enumerate(self.G.nodes()):
-            household = Households(unique_id=i, model=self)
+            household = Households(unique_id=i, model=self, fine= self.fine)
             self.schedule.add(household)
             self.grid.place_agent(agent=household, node_id=node)
+
+        government_agent = Government(unique_id=100, model=self,fine= self.fine)
+        self.schedule.add(government_agent)
+        self.grid.place_agent(agent=government_agent, node_id=2)
 
         # You might want to create other agents here, e.g. insurance agents.
 
@@ -164,7 +170,10 @@ class AdaptationModel(Model):
 
         # Collect agent locations and statuses
         for agent in self.schedule.agents:
-            color = 'blue' if agent.is_adapted else 'red'
+            if isinstance(agent, Households):
+                color = 'blue' if agent.is_adapted else 'red'
+            else:
+                color = 'green'
             ax.scatter(agent.location.x, agent.location.y, color=color, s=10, label=color.capitalize() if not ax.collections else "")
             ax.annotate(str(agent.unique_id), (agent.location.x, agent.location.y), textcoords="offset points", xytext=(0,1), ha='center', fontsize=9)
         # Create legend with unique entries
@@ -184,28 +193,32 @@ class AdaptationModel(Model):
         at time step 5, there will be a global flooding.
         This will result in actual flood depth. Here, we assume it is a random number
         between 0.5 and 1.2 of the estimated flood depth. In your model, you can replace this
-        with a more sound procedure (e.g., you can devide the floop map into zones and 
+        with a more sound procedure (e.g., you can divide the flood map into zones and
         assume local flooding instead of global flooding). The actual flood depth can be 
         estimated differently
         """
         #opzet voor functie om totale schade bij een flooding te berekenen, kan uiteindelijk geintegreeerd worden in de if functie hieronder
         for agent in self.schedule.agents:
+            if isinstance(agent, Households):
             # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
-            agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
+                agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
             # calculate the actual flood damage given the actual flood depth
-            agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
-            agent.flood_damage_monetary_value = agent.flood_damage_actual*self.max_damage_dol_per_sqm
-            self.total_damage += agent.flood_damage_monetary_value
+                agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
+                agent.flood_damage_monetary_value = agent.flood_damage_actual*self.max_damage_dol_per_sqm
+                self.total_damage += agent.flood_damage_monetary_value
         print(self.total_damage)
 
 
         if self.schedule.steps == 5:
             for agent in self.schedule.agents:
-                # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
-                agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
-                # calculate the actual flood damage given the actual flood depth
-                agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
+                if isinstance(agent, Households):
+                    # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
+                    agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
+                    # calculate the actual flood damage given the actual flood depth
+                    agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
         
         # Collect data and advance the model by one step
         self.datacollector.collect(self)
+        # for agent in self.schedule:
+        #     agent.step()
         self.schedule.step()
