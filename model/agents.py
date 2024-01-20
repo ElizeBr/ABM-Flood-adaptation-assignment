@@ -49,7 +49,7 @@ class Households(Agent):
 
         # calculate the actual flood damage given the actual flood depth. Flood damage is a factor between 0 and 1
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
-
+        self.flood_damage_final = 0
         self.discount_rate = 0.98
         self.elevation_costs_per_square_metre = 220.982  # argumented in report
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
