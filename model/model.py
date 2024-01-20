@@ -78,6 +78,7 @@ class AdaptationModel(Model):
             self.grid.place_agent(agent=household, node_id=node)
 
         government_agent = Government(unique_id=100, model=self,fine= self.fine)
+        government_agent.household_list = self.schedule.agents
         self.schedule.add(government_agent)
         self.grid.place_agent(agent=government_agent, node_id=2)
 

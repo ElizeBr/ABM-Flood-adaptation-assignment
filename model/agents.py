@@ -189,6 +189,9 @@ class Government(Agent):
         loc_x, loc_y = generate_random_location_within_map_domain()
         self.location = Point(loc_x, loc_y)
         self.fine = fine
+        self.household_list= []
+        self.fined_household_list= []
+        self.fined_total = 0
     def warn_households(self, schedule_of_households): #gebruik een list van de households, schedule voor volgorde.
         flood_warning_effectiveness = 0
         if self.flood_warning == "Low":
@@ -208,7 +211,7 @@ class Government(Agent):
     def count_friends(self, radius):
         #to fix the reporting
         return None
-    def check_certification(self, household):
+    def complies_with_certification(self, household):
         if household.taken_measures >= self.regulations:
             return True
         else:
@@ -216,11 +219,21 @@ class Government(Agent):
 
     def fine_household(self, household):
         household.money_saved -= self.fine
+        self.fined_household_list.append(household)
+        self.fined_total += self.fine
+
+    def check_certification(self, household):
+        if not self.complies_with_certification(household):
+            self.fine_household(household)
+
+    def check_all_households(self):
+        for household in self.household_list:
+            if isinstance(household, Households):
+                self.check_certification(household)
 
     def step(self):
-        # The government agent doesn't perform any actions.
-        pass
-
+        self.check_all_households()
+        #warn_households(self.household_list)
 
 # define Insurance agent
 class Insurance(Agent):
