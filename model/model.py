@@ -87,7 +87,8 @@ class AdaptationModel(Model):
         # Data collection setup to collect data
         model_metrics = {
                         "total_adapted_households": self.total_adapted_households,
-                        # ... other reporters ...
+                        "total_flood_damage": self.total_flood_damage,
+            # ... other reporters ...""
                         }
         
         agent_metrics = {
@@ -98,6 +99,8 @@ class AdaptationModel(Model):
                         "IsAdapted": "is_adapted",
                         "FriendsCount": lambda a: a.count_friends(radius=1),
                         "location":"location",
+                        "MoneySaved": "money_saved",
+                        "FinedTotal": "fined_total",
                         #"FloodMeasures" : self.taken_measures_list
                         # ... other reporters ...
                         }
@@ -161,7 +164,12 @@ class AdaptationModel(Model):
         #BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING "ISINSTANCE"
         adapted_count = sum([1 for agent in self.schedule.agents if isinstance(agent, Households) and agent.is_adapted])
         return adapted_count
-    
+
+    def total_flood_damage(self):
+        """Return the total number of households that have adapted."""
+        #BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING "ISINSTANCE"
+        total_damage = sum([agent.flood_damage_final for agent in self.schedule.agents if isinstance(agent, Households)])
+        return total_damage
     def plot_model_domain_with_agents(self):
         fig, ax = plt.subplots()
         # Plot the model domain
