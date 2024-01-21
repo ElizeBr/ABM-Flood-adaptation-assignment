@@ -1,0 +1,234 @@
+<html>
+<head>
+<title>model.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #5f826b; font-style: italic;}
+.s5 { color: #2aacb8;}
+.s6 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+model.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Importing necessary libraries</span>
+<span class="s2">import </span><span class="s1">networkx </span><span class="s2">as </span><span class="s1">nx</span>
+<span class="s2">from </span><span class="s1">mesa </span><span class="s2">import </span><span class="s1">Model</span><span class="s3">, </span><span class="s1">Agent</span>
+<span class="s2">from </span><span class="s1">mesa</span><span class="s3">.</span><span class="s1">time </span><span class="s2">import </span><span class="s1">RandomActivation</span><span class="s3">, </span><span class="s1">SimultaneousActivation</span>
+<span class="s2">from </span><span class="s1">mesa</span><span class="s3">.</span><span class="s1">space </span><span class="s2">import </span><span class="s1">NetworkGrid</span>
+<span class="s2">from </span><span class="s1">mesa</span><span class="s3">.</span><span class="s1">datacollection </span><span class="s2">import </span><span class="s1">DataCollector</span>
+<span class="s2">import </span><span class="s1">geopandas </span><span class="s2">as </span><span class="s1">gpd</span>
+<span class="s2">import </span><span class="s1">rasterio </span><span class="s2">as </span><span class="s1">rs</span>
+<span class="s2">import </span><span class="s1">matplotlib</span><span class="s3">.</span><span class="s1">pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+<span class="s2">import </span><span class="s1">random</span>
+
+<span class="s0"># Import the agent class(es) from agents.py</span>
+<span class="s2">from </span><span class="s1">agents </span><span class="s2">import </span><span class="s1">Households</span>
+
+<span class="s0"># Import functions from functions.py</span>
+<span class="s2">from </span><span class="s1">functions </span><span class="s2">import </span><span class="s1">get_flood_map_data</span><span class="s3">, </span><span class="s1">calculate_basic_flood_damage</span>
+<span class="s2">from </span><span class="s1">functions </span><span class="s2">import </span><span class="s1">map_domain_gdf</span><span class="s3">, </span><span class="s1">floodplain_gdf</span>
+
+
+<span class="s0"># Define the AdaptationModel class</span>
+<span class="s2">class </span><span class="s1">AdaptationModel</span><span class="s3">(</span><span class="s1">Model</span><span class="s3">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    The main model running the simulation. It sets up the network of household agents, 
+    simulates their behavior, and collects data. The network type can be adjusted based on study requirements. 
+    &quot;&quot;&quot;</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span>
+                 <span class="s1">seed </span><span class="s3">= </span><span class="s2">None</span><span class="s3">,</span>
+                 <span class="s1">number_of_households </span><span class="s3">= </span><span class="s5">25</span><span class="s3">, </span><span class="s0"># number of household agents</span>
+                 <span class="s0"># flood damage related: from Huizinga, de Moel --&gt; damage factor</span>
+                 <span class="s0"># in dollar and adjusted for inflation to 2020 value</span>
+                 <span class="s1">max_damage_dol_per_sqm </span><span class="s3">= </span><span class="s5">1216.65</span><span class="s3">,</span>
+                 <span class="s0"># Simplified argument for choosing flood map. Can currently be &quot;harvey&quot;, &quot;100yr&quot;, or &quot;500yr&quot;.</span>
+                 <span class="s1">flood_map_choice</span><span class="s3">=</span><span class="s6">'harvey'</span><span class="s3">,</span>
+                 <span class="s0"># ### network related parameters ###</span>
+                 <span class="s0"># The social network structure that is used.</span>
+                 <span class="s0"># Can currently be &quot;erdos_renyi&quot;, &quot;barabasi_albert&quot;, &quot;watts_strogatz&quot;, or &quot;no_network&quot;</span>
+                 <span class="s1">network </span><span class="s3">= </span><span class="s6">'watts_strogatz'</span><span class="s3">,</span>
+                 <span class="s0"># likeliness of edge being created between two nodes</span>
+                 <span class="s1">probability_of_network_connection </span><span class="s3">= </span><span class="s5">0.4</span><span class="s3">,</span>
+                 <span class="s0"># number of edges for BA network</span>
+                 <span class="s1">number_of_edges </span><span class="s3">= </span><span class="s5">3</span><span class="s3">,</span>
+                 <span class="s0"># number of nearest neighbours for WS social network</span>
+                 <span class="s1">number_of_nearest_neighbours </span><span class="s3">= </span><span class="s5">5</span><span class="s3">,</span>
+                 <span class="s3">):</span>
+        
+        <span class="s1">super</span><span class="s3">().</span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">seed </span><span class="s3">= </span><span class="s1">seed</span><span class="s3">)</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">total_damage </span><span class="s3">= </span><span class="s5">0</span>
+        <span class="s0"># defining the variables and setting the values</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households </span><span class="s3">= </span><span class="s1">number_of_households  </span><span class="s0"># Total number of household agents</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">seed </span><span class="s3">= </span><span class="s1">seed</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">max_damage_dol_per_sqm </span><span class="s3">= </span><span class="s1">max_damage_dol_per_sqm</span>
+
+        <span class="s0"># network</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">network </span><span class="s3">= </span><span class="s1">network </span><span class="s0"># Type of network to be created</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">probability_of_network_connection </span><span class="s3">= </span><span class="s1">probability_of_network_connection</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_edges </span><span class="s3">= </span><span class="s1">number_of_edges</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_nearest_neighbours </span><span class="s3">= </span><span class="s1">number_of_nearest_neighbours</span>
+
+        <span class="s0"># generating the graph according to the network used and the network parameters specified</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">G </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">initialize_network</span><span class="s3">()</span>
+        <span class="s0"># create grid out of network graph</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">grid </span><span class="s3">= </span><span class="s1">NetworkGrid</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">G</span><span class="s3">)</span>
+
+        <span class="s0"># Initialize maps</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">initialize_maps</span><span class="s3">(</span><span class="s1">flood_map_choice</span><span class="s3">)</span>
+
+        <span class="s0"># set schedule for agents</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">schedule </span><span class="s3">= </span><span class="s1">RandomActivation</span><span class="s3">(</span><span class="s1">self</span><span class="s3">)  </span><span class="s0"># Schedule for activating agents</span>
+
+        <span class="s0"># create households through initiating a household on each node of the network graph</span>
+        <span class="s2">for </span><span class="s1">i</span><span class="s3">, </span><span class="s1">node </span><span class="s2">in </span><span class="s1">enumerate</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">G</span><span class="s3">.</span><span class="s1">nodes</span><span class="s3">()):</span>
+            <span class="s1">household </span><span class="s3">= </span><span class="s1">Households</span><span class="s3">(</span><span class="s1">unique_id</span><span class="s3">=</span><span class="s1">i</span><span class="s3">, </span><span class="s1">model</span><span class="s3">=</span><span class="s1">self</span><span class="s3">)</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">household</span><span class="s3">)</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">grid</span><span class="s3">.</span><span class="s1">place_agent</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">=</span><span class="s1">household</span><span class="s3">, </span><span class="s1">node_id</span><span class="s3">=</span><span class="s1">node</span><span class="s3">)</span>
+
+        <span class="s0"># You might want to create other agents here, e.g. insurance agents.</span>
+
+        <span class="s0"># Data collection setup to collect data</span>
+        <span class="s1">model_metrics </span><span class="s3">= {</span>
+                        <span class="s6">&quot;total_adapted_households&quot;</span><span class="s3">: </span><span class="s1">self</span><span class="s3">.</span><span class="s1">total_adapted_households</span><span class="s3">,</span>
+                        <span class="s0"># ... other reporters ...</span>
+                        <span class="s3">}</span>
+        
+        <span class="s1">agent_metrics </span><span class="s3">= {</span>
+                        <span class="s6">&quot;FloodDepthEstimated&quot;</span><span class="s3">: </span><span class="s6">&quot;flood_depth_estimated&quot;</span><span class="s3">,</span>
+                        <span class="s6">&quot;FloodDamageEstimated&quot; </span><span class="s3">: </span><span class="s6">&quot;flood_damage_estimated&quot;</span><span class="s3">,</span>
+                        <span class="s6">&quot;FloodDepthActual&quot;</span><span class="s3">: </span><span class="s6">&quot;flood_depth_actual&quot;</span><span class="s3">,</span>
+                        <span class="s6">&quot;FloodDamageActual&quot; </span><span class="s3">: </span><span class="s6">&quot;flood_damage_actual&quot;</span><span class="s3">,</span>
+                        <span class="s6">&quot;IsAdapted&quot;</span><span class="s3">: </span><span class="s6">&quot;is_adapted&quot;</span><span class="s3">,</span>
+                        <span class="s6">&quot;FriendsCount&quot;</span><span class="s3">: </span><span class="s2">lambda </span><span class="s1">a</span><span class="s3">: </span><span class="s1">a</span><span class="s3">.</span><span class="s1">count_friends</span><span class="s3">(</span><span class="s1">radius</span><span class="s3">=</span><span class="s5">1</span><span class="s3">),</span>
+                        <span class="s6">&quot;location&quot;</span><span class="s3">:</span><span class="s6">&quot;location&quot;</span><span class="s3">,</span>
+                        <span class="s0">#&quot;FloodMeasures&quot; : self.taken_measures_list</span>
+                        <span class="s0"># ... other reporters ...</span>
+                        <span class="s3">}</span>
+        <span class="s0">#set up the data collector </span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">datacollector </span><span class="s3">= </span><span class="s1">DataCollector</span><span class="s3">(</span><span class="s1">model_reporters</span><span class="s3">=</span><span class="s1">model_metrics</span><span class="s3">,</span><span class="s1">agent_reporters</span><span class="s3">=</span><span class="s1">agent_metrics</span><span class="s3">)</span>
+            
+
+    <span class="s2">def </span><span class="s1">initialize_network</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s4">&quot;&quot;&quot; 
+        Initialize and return the social network graph based on the provided network type using pattern matching. 
+        &quot;&quot;&quot;</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">network </span><span class="s3">== </span><span class="s6">'erdos_renyi'</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">nx</span><span class="s3">.</span><span class="s1">erdos_renyi_graph</span><span class="s3">(</span><span class="s1">n</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households</span><span class="s3">,</span>
+                                        <span class="s1">p</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_nearest_neighbours </span><span class="s3">/ </span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households</span><span class="s3">,</span>
+                                        <span class="s1">seed</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">seed</span><span class="s3">)</span>
+        <span class="s2">elif </span><span class="s1">self</span><span class="s3">.</span><span class="s1">network </span><span class="s3">== </span><span class="s6">'barabasi_albert'</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">nx</span><span class="s3">.</span><span class="s1">barabasi_albert_graph</span><span class="s3">(</span><span class="s1">n</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households</span><span class="s3">,</span>
+                                            <span class="s1">m</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_edges</span><span class="s3">,</span>
+                                            <span class="s1">seed</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">seed</span><span class="s3">)</span>
+        <span class="s2">elif </span><span class="s1">self</span><span class="s3">.</span><span class="s1">network </span><span class="s3">== </span><span class="s6">'watts_strogatz'</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">nx</span><span class="s3">.</span><span class="s1">watts_strogatz_graph</span><span class="s3">(</span><span class="s1">n</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households</span><span class="s3">,</span>
+                                        <span class="s1">k</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_nearest_neighbours</span><span class="s3">,</span>
+                                        <span class="s1">p</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">probability_of_network_connection</span><span class="s3">,</span>
+                                        <span class="s1">seed</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">seed</span><span class="s3">)</span>
+        <span class="s2">elif </span><span class="s1">self</span><span class="s3">.</span><span class="s1">network </span><span class="s3">== </span><span class="s6">'no_network'</span><span class="s3">:</span>
+            <span class="s1">G </span><span class="s3">= </span><span class="s1">nx</span><span class="s3">.</span><span class="s1">Graph</span><span class="s3">()</span>
+            <span class="s1">G</span><span class="s3">.</span><span class="s1">add_nodes_from</span><span class="s3">(</span><span class="s1">range</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">number_of_households</span><span class="s3">))</span>
+            <span class="s2">return </span><span class="s1">G</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s2">raise </span><span class="s1">ValueError</span><span class="s3">(</span><span class="s6">f&quot;Unknown network type: '</span><span class="s2">{</span><span class="s1">self</span><span class="s3">.</span><span class="s1">network</span><span class="s2">}</span><span class="s6">'. &quot;</span>
+                            <span class="s6">f&quot;Currently implemented network types are: &quot;</span>
+                            <span class="s6">f&quot;'erdos_renyi', 'barabasi_albert', 'watts_strogatz', and 'no_network'&quot;</span><span class="s3">)</span>
+
+
+    <span class="s2">def </span><span class="s1">initialize_maps</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">flood_map_choice</span><span class="s3">):</span>
+        <span class="s4">&quot;&quot;&quot; 
+        Initialize and set up the flood map related data based on the provided flood map choice. 
+        &quot;&quot;&quot;</span>
+        <span class="s0"># Define paths to flood maps</span>
+        <span class="s1">flood_map_paths </span><span class="s3">= {</span>
+            <span class="s6">'harvey'</span><span class="s3">: </span><span class="s6">r'../input_data/floodmaps/Harvey_depth_meters.tif'</span><span class="s3">,</span>
+            <span class="s6">'100yr'</span><span class="s3">: </span><span class="s6">r'../input_data/floodmaps/100yr_storm_depth_meters.tif'</span><span class="s3">,</span>
+            <span class="s6">'500yr'</span><span class="s3">: </span><span class="s6">r'../input_data/floodmaps/500yr_storm_depth_meters.tif'  </span><span class="s0"># Example path for 500yr flood map</span>
+        <span class="s3">}</span>
+
+        <span class="s0"># Throw a ValueError if the flood map choice is not in the dictionary</span>
+        <span class="s2">if </span><span class="s1">flood_map_choice </span><span class="s2">not in </span><span class="s1">flood_map_paths</span><span class="s3">.</span><span class="s1">keys</span><span class="s3">():</span>
+            <span class="s2">raise </span><span class="s1">ValueError</span><span class="s3">(</span><span class="s6">f&quot;Unknown flood map choice: '</span><span class="s2">{</span><span class="s1">flood_map_choice</span><span class="s2">}</span><span class="s6">'. &quot;</span>
+                             <span class="s6">f&quot;Currently implemented choices are: </span><span class="s2">{</span><span class="s1">list</span><span class="s3">(</span><span class="s1">flood_map_paths</span><span class="s3">.</span><span class="s1">keys</span><span class="s3">())</span><span class="s2">}</span><span class="s6">&quot;</span><span class="s3">)</span>
+
+        <span class="s0"># Choose the appropriate flood map based on the input choice</span>
+        <span class="s1">flood_map_path </span><span class="s3">= </span><span class="s1">flood_map_paths</span><span class="s3">[</span><span class="s1">flood_map_choice</span><span class="s3">]</span>
+
+        <span class="s0"># Loading and setting up the flood map</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_map </span><span class="s3">= </span><span class="s1">rs</span><span class="s3">.</span><span class="s1">open</span><span class="s3">(</span><span class="s1">flood_map_path</span><span class="s3">)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">band_flood_img</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">bound_left</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">bound_right</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">bound_top</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">bound_bottom </span><span class="s3">= </span><span class="s1">get_flood_map_data</span><span class="s3">(</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_map</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">total_adapted_households</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s4">&quot;&quot;&quot;Return the total number of households that have adapted.&quot;&quot;&quot;</span>
+        <span class="s0">#BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING &quot;ISINSTANCE&quot;</span>
+        <span class="s1">adapted_count </span><span class="s3">= </span><span class="s1">sum</span><span class="s3">([</span><span class="s5">1 </span><span class="s2">for </span><span class="s1">agent </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">agents </span><span class="s2">if </span><span class="s1">isinstance</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">, </span><span class="s1">Households</span><span class="s3">) </span><span class="s2">and </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">is_adapted</span><span class="s3">])</span>
+        <span class="s2">return </span><span class="s1">adapted_count</span>
+    
+    <span class="s2">def </span><span class="s1">plot_model_domain_with_agents</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">fig</span><span class="s3">, </span><span class="s1">ax </span><span class="s3">= </span><span class="s1">plt</span><span class="s3">.</span><span class="s1">subplots</span><span class="s3">()</span>
+        <span class="s0"># Plot the model domain</span>
+        <span class="s1">map_domain_gdf</span><span class="s3">.</span><span class="s1">plot</span><span class="s3">(</span><span class="s1">ax</span><span class="s3">=</span><span class="s1">ax</span><span class="s3">, </span><span class="s1">color</span><span class="s3">=</span><span class="s6">'lightgrey'</span><span class="s3">)</span>
+        <span class="s0"># Plot the floodplain</span>
+        <span class="s1">floodplain_gdf</span><span class="s3">.</span><span class="s1">plot</span><span class="s3">(</span><span class="s1">ax</span><span class="s3">=</span><span class="s1">ax</span><span class="s3">, </span><span class="s1">color</span><span class="s3">=</span><span class="s6">'lightblue'</span><span class="s3">, </span><span class="s1">edgecolor</span><span class="s3">=</span><span class="s6">'k'</span><span class="s3">, </span><span class="s1">alpha</span><span class="s3">=</span><span class="s5">0.5</span><span class="s3">)</span>
+
+        <span class="s0"># Collect agent locations and statuses</span>
+        <span class="s2">for </span><span class="s1">agent </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">agents</span><span class="s3">:</span>
+            <span class="s1">color </span><span class="s3">= </span><span class="s6">'blue' </span><span class="s2">if </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">is_adapted </span><span class="s2">else </span><span class="s6">'red'</span>
+            <span class="s1">ax</span><span class="s3">.</span><span class="s1">scatter</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">x</span><span class="s3">, </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">y</span><span class="s3">, </span><span class="s1">color</span><span class="s3">=</span><span class="s1">color</span><span class="s3">, </span><span class="s1">s</span><span class="s3">=</span><span class="s5">10</span><span class="s3">, </span><span class="s1">label</span><span class="s3">=</span><span class="s1">color</span><span class="s3">.</span><span class="s1">capitalize</span><span class="s3">() </span><span class="s2">if not </span><span class="s1">ax</span><span class="s3">.</span><span class="s1">collections </span><span class="s2">else </span><span class="s6">&quot;&quot;</span><span class="s3">)</span>
+            <span class="s1">ax</span><span class="s3">.</span><span class="s1">annotate</span><span class="s3">(</span><span class="s1">str</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">.</span><span class="s1">unique_id</span><span class="s3">), (</span><span class="s1">agent</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">x</span><span class="s3">, </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">y</span><span class="s3">), </span><span class="s1">textcoords</span><span class="s3">=</span><span class="s6">&quot;offset points&quot;</span><span class="s3">, </span><span class="s1">xytext</span><span class="s3">=(</span><span class="s5">0</span><span class="s3">,</span><span class="s5">1</span><span class="s3">), </span><span class="s1">ha</span><span class="s3">=</span><span class="s6">'center'</span><span class="s3">, </span><span class="s1">fontsize</span><span class="s3">=</span><span class="s5">9</span><span class="s3">)</span>
+        <span class="s0"># Create legend with unique entries</span>
+        <span class="s1">handles</span><span class="s3">, </span><span class="s1">labels </span><span class="s3">= </span><span class="s1">ax</span><span class="s3">.</span><span class="s1">get_legend_handles_labels</span><span class="s3">()</span>
+        <span class="s1">by_label </span><span class="s3">= </span><span class="s1">dict</span><span class="s3">(</span><span class="s1">zip</span><span class="s3">(</span><span class="s1">labels</span><span class="s3">, </span><span class="s1">handles</span><span class="s3">))</span>
+        <span class="s1">ax</span><span class="s3">.</span><span class="s1">legend</span><span class="s3">(</span><span class="s1">by_label</span><span class="s3">.</span><span class="s1">values</span><span class="s3">(), </span><span class="s1">by_label</span><span class="s3">.</span><span class="s1">keys</span><span class="s3">(), </span><span class="s1">title</span><span class="s3">=</span><span class="s6">&quot;Red: not adapted, Blue: adapted&quot;</span><span class="s3">)</span>
+
+        <span class="s0"># Customize plot with titles and labels</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s6">f'Model Domain with Agents at Step </span><span class="s2">{</span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">steps</span><span class="s2">}</span><span class="s6">'</span><span class="s3">)</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">xlabel</span><span class="s3">(</span><span class="s6">'Longitude'</span><span class="s3">)</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">ylabel</span><span class="s3">(</span><span class="s6">'Latitude'</span><span class="s3">)</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+
+    <span class="s2">def </span><span class="s1">step</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s4">&quot;&quot;&quot; 
+        introducing a shock:  
+        at time step 5, there will be a global flooding. 
+        This will result in actual flood depth. Here, we assume it is a random number 
+        between 0.5 and 1.2 of the estimated flood depth. In your model, you can replace this 
+        with a more sound procedure (e.g., you can devide the floop map into zones and  
+        assume local flooding instead of global flooding). The actual flood depth can be  
+        estimated differently 
+        &quot;&quot;&quot;</span>
+        <span class="s0">#opzet voor functie om totale schade bij een flooding te berekenen, kan uiteindelijk geintegreeerd worden in de if functie hieronder</span>
+        <span class="s2">for </span><span class="s1">agent </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">agents</span><span class="s3">:</span>
+            <span class="s0"># Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth</span>
+            <span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_actual </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">uniform</span><span class="s3">(</span><span class="s5">0.5</span><span class="s3">, </span><span class="s5">1.2</span><span class="s3">) * </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_estimated</span>
+            <span class="s0"># calculate the actual flood damage given the actual flood depth</span>
+            <span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_damage_actual </span><span class="s3">= </span><span class="s1">calculate_basic_flood_damage</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_actual</span><span class="s3">)</span>
+            <span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_damage_monetary_value </span><span class="s3">= </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_damage_actual</span><span class="s3">*</span><span class="s1">self</span><span class="s3">.</span><span class="s1">max_damage_dol_per_sqm</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">total_damage </span><span class="s3">+= </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_damage_monetary_value</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">total_damage</span><span class="s3">)</span>
+
+
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">steps </span><span class="s3">== </span><span class="s5">5</span><span class="s3">:</span>
+            <span class="s2">for </span><span class="s1">agent </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">agents</span><span class="s3">:</span>
+                <span class="s0"># Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth</span>
+                <span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_actual </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">uniform</span><span class="s3">(</span><span class="s5">0.5</span><span class="s3">, </span><span class="s5">1.2</span><span class="s3">) * </span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_estimated</span>
+                <span class="s0"># calculate the actual flood damage given the actual flood depth</span>
+                <span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_damage_actual </span><span class="s3">= </span><span class="s1">calculate_basic_flood_damage</span><span class="s3">(</span><span class="s1">agent</span><span class="s3">.</span><span class="s1">flood_depth_actual</span><span class="s3">)</span>
+        
+        <span class="s0"># Collect data and advance the model by one step</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">datacollector</span><span class="s3">.</span><span class="s1">collect</span><span class="s3">(</span><span class="s1">self</span><span class="s3">)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">schedule</span><span class="s3">.</span><span class="s1">step</span><span class="s3">()</span>
+</pre>
+</body>
+</html>

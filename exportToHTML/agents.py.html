@@ -1,0 +1,234 @@
+<html>
+<head>
+<title>agents.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #5f826b; font-style: italic;}
+.s5 { color: #2aacb8;}
+.s6 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+agents.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Importing necessary libraries</span>
+<span class="s2">import </span><span class="s1">random</span>
+<span class="s2">from </span><span class="s1">mesa </span><span class="s2">import </span><span class="s1">Agent</span>
+<span class="s2">from </span><span class="s1">shapely</span><span class="s3">.</span><span class="s1">geometry </span><span class="s2">import </span><span class="s1">Point</span>
+<span class="s2">from </span><span class="s1">shapely </span><span class="s2">import </span><span class="s1">contains_xy</span>
+
+<span class="s0"># Import functions from functions.py</span>
+<span class="s2">from </span><span class="s1">functions </span><span class="s2">import </span><span class="s1">generate_random_location_within_map_domain</span><span class="s3">, </span><span class="s1">get_flood_depth</span><span class="s3">, </span><span class="s1">calculate_basic_flood_damage</span>
+<span class="s2">from </span><span class="s1">functions </span><span class="s2">import </span><span class="s1">floodplain_multipolygon</span>
+
+
+<span class="s0"># Define the Households agent class</span>
+<span class="s2">class </span><span class="s1">Households</span><span class="s3">(</span><span class="s1">Agent</span><span class="s3">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    An agent representing a household in the model. 
+    Each household has a flood depth attribute which is randomly assigned for demonstration purposes. 
+    In a real scenario, this would be based on actual geographical data or more complex logic. 
+    &quot;&quot;&quot;</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">):</span>
+        <span class="s1">super</span><span class="s3">().</span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">is_adapted </span><span class="s3">= </span><span class="s2">False  </span><span class="s0"># Initial adaptation status set to False</span>
+
+        <span class="s0"># getting flood map values</span>
+        <span class="s0"># Get a random location on the map</span>
+        <span class="s1">loc_x</span><span class="s3">, </span><span class="s1">loc_y </span><span class="s3">= </span><span class="s1">generate_random_location_within_map_domain</span><span class="s3">()</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">location </span><span class="s3">= </span><span class="s1">Point</span><span class="s3">(</span><span class="s1">loc_x</span><span class="s3">, </span><span class="s1">loc_y</span><span class="s3">)</span>
+
+        <span class="s0"># Check whether the location is within floodplain</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">in_floodplain </span><span class="s3">= </span><span class="s2">False</span>
+        <span class="s2">if </span><span class="s1">contains_xy</span><span class="s3">(</span><span class="s1">geom</span><span class="s3">=</span><span class="s1">floodplain_multipolygon</span><span class="s3">, </span><span class="s1">x</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">x</span><span class="s3">, </span><span class="s1">y</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">location</span><span class="s3">.</span><span class="s1">y</span><span class="s3">):</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">in_floodplain </span><span class="s3">= </span><span class="s2">True</span>
+
+        <span class="s0"># Get the estimated flood depth at those coordinates. </span>
+        <span class="s0"># the estimated flood depth is calculated based on the flood map (i.e., past data) so this is not the actual flood depth</span>
+        <span class="s0"># Flood depth can be negative if the location is at a high elevation</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_estimated </span><span class="s3">= </span><span class="s1">get_flood_depth</span><span class="s3">(</span><span class="s1">corresponding_map</span><span class="s3">=</span><span class="s1">model</span><span class="s3">.</span><span class="s1">flood_map</span><span class="s3">, </span><span class="s1">location</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">location</span><span class="s3">,</span>
+                                                     <span class="s1">band</span><span class="s3">=</span><span class="s1">model</span><span class="s3">.</span><span class="s1">band_flood_img</span><span class="s3">)</span>
+        <span class="s0"># handle negative values of flood depth</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_estimated </span><span class="s3">&lt; </span><span class="s5">0</span><span class="s3">:</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_estimated </span><span class="s3">= </span><span class="s5">0</span>
+
+        <span class="s0"># calculate the estimated flood damage given the estimated flood depth. Flood damage is a factor between 0 and 1</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_damage_estimated </span><span class="s3">= </span><span class="s1">calculate_basic_flood_damage</span><span class="s3">(</span><span class="s1">flood_depth</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_estimated</span><span class="s3">)</span>
+
+        <span class="s0"># Add an attribute for the actual flood depth. This is set to zero at the beginning of the simulation since there is not flood yet</span>
+        <span class="s0"># and will update its value when there is a shock (i.e., actual flood). Shock happens at some point during the simulation</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_actual </span><span class="s3">= </span><span class="s5">0</span>
+
+        <span class="s0"># calculate the actual flood damage given the actual flood depth. Flood damage is a factor between 0 and 1</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_damage_actual </span><span class="s3">= </span><span class="s1">calculate_basic_flood_damage</span><span class="s3">(</span><span class="s1">flood_depth</span><span class="s3">=</span><span class="s1">self</span><span class="s3">.</span><span class="s1">flood_depth_actual</span><span class="s3">)</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">discount_rate </span><span class="s3">= </span><span class="s5">0.98</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">elevation_costs_per_square_metre </span><span class="s3">= </span><span class="s5">220.982  </span><span class="s0"># argumented in report</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">max_damage_dol_per_sqm </span><span class="s3">= </span><span class="s5">1216.65  </span><span class="s0"># extracted from model file</span>
+
+        <span class="s0"># range around average house size (159.14 square meters)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">size_of_house </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">randrange</span><span class="s3">(</span><span class="s5">120</span><span class="s3">, </span><span class="s5">200</span><span class="s3">)</span>
+        <span class="s0"># range around average quarterly income (17078)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">income </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">randrange</span><span class="s3">(</span><span class="s5">13000</span><span class="s3">, </span><span class="s5">22000</span><span class="s3">)</span>
+        <span class="s0"># start value of saved money (we could also randomize the 1.8)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">money_saved </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">income </span><span class="s3">* </span><span class="s5">1.8</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">trust_factor </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">uniform</span><span class="s3">(</span><span class="s5">0</span><span class="s3">,</span><span class="s5">0.1</span><span class="s3">)</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">taken_measures </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">random</span><span class="s3">()</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">taken_measures_list </span><span class="s3">= []</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_probability </span><span class="s3">= </span><span class="s1">random</span><span class="s3">.</span><span class="s1">random</span><span class="s3">()</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_costs_of_measures </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">elevation_costs_per_square_metre </span><span class="s3">* </span><span class="s1">self</span><span class="s3">.</span><span class="s1">size_of_house</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_damage </span><span class="s3">= </span><span class="s2">None</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_effectiveness_of_measures </span><span class="s3">= </span><span class="s5">5</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">desire_to_take_measures </span><span class="s3">= </span><span class="s2">False</span>
+
+    <span class="s0"># Function to count friends who can be influential.</span>
+    <span class="s2">def </span><span class="s1">count_friends</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">radius</span><span class="s3">):</span>
+        <span class="s4">&quot;&quot;&quot;Count the number of neighbors within a given radius (number of edges away). This is social relation and not spatial&quot;&quot;&quot;</span>
+        <span class="s1">friends </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">model</span><span class="s3">.</span><span class="s1">grid</span><span class="s3">.</span><span class="s1">get_neighborhood</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">pos</span><span class="s3">, </span><span class="s1">include_center</span><span class="s3">=</span><span class="s2">False</span><span class="s3">, </span><span class="s1">radius</span><span class="s3">=</span><span class="s1">radius</span><span class="s3">)</span>
+        <span class="s2">return </span><span class="s1">len</span><span class="s3">(</span><span class="s1">friends</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">save_money</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s0"># print(&quot;Money before savings:&quot; + str(self.money_saved))</span>
+        <span class="s0"># print(&quot;Income&quot; + str(self.income))</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">money_saved </span><span class="s3">+= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">income </span><span class="s3">* </span><span class="s5">0.05  </span><span class="s0"># assumming that 5% of income are savings</span>
+        <span class="s0"># print(&quot;Money saved: &quot; + str(self.money_saved))</span>
+
+    <span class="s2">def </span><span class="s1">construct_perceived_flood_probability</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">neighbors </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">model</span><span class="s3">.</span><span class="s1">grid</span><span class="s3">.</span><span class="s1">get_neighbors</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">pos</span><span class="s3">, </span><span class="s1">include_center</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)</span>
+
+        <span class="s0"># neighbor_ids = [neighbor.unique_id for neighbor in neighbors]</span>
+        <span class="s0"># print(f&quot;Neighbors of agent {self.unique_id}: {neighbor_ids}&quot;)</span>
+
+        <span class="s0"># @ Fin, discount rate moet voor de for-loop, want nu wordt de discount rate afgetrokken voor elke neighbour,</span>
+        <span class="s0"># en het moet maar 1 keer per ronde</span>
+
+        <span class="s2">for </span><span class="s1">neighbor </span><span class="s2">in </span><span class="s1">neighbors</span><span class="s3">:</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_probability </span><span class="s3">= (</span>
+                    <span class="s1">self</span><span class="s3">.</span><span class="s1">discount_rate </span><span class="s3">* </span><span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_probability </span><span class="s3">* (</span><span class="s5">1 </span><span class="s3">- </span><span class="s1">neighbor</span><span class="s3">.</span><span class="s1">trust_factor</span><span class="s3">) +</span>
+                    <span class="s1">neighbor</span><span class="s3">.</span><span class="s1">trust_factor </span><span class="s3">* </span><span class="s1">neighbor</span><span class="s3">.</span><span class="s1">perceived_flood_probability</span><span class="s3">)</span>
+
+        <span class="s0"># TO DO: write part of function where perceived flood probability is influenced by government.</span>
+        <span class="s0"># Bij government agent optie maken om de floodwarning op 1 van deze 3 waardes te zetten en dat heeft bepaalde invloed op perceived_flood_probability</span>
+        <span class="s0"># weet zelf even niet hoe dit codetechnisch moet, variabele vanuit andere agent</span>
+        <span class="s0"># Ik wil dat deze waarde bij de eerste timestep gelijk erbij wordt opgeteld en daarna niet meer. Op deze manier blijft de perceived flood probability niet oneindig stijgen. Ik weet alleen niet hoe dit moet</span>
+        <span class="s0"># if government.flood_warning = &quot;Low&quot;:</span>
+            <span class="s0">#self.perceived_flood_probability = self.perceived_flood_probability + 0</span>
+
+        <span class="s0"># elif government.flood_warning = &quot;Medium&quot;:</span>
+            <span class="s0">#self.perceived_flood_probability = self.perceived_flood_probability + 0.2</span>
+        <span class="s0"># elif government.flood_warning = &quot;High&quot;:</span>
+            <span class="s0"># self.perceived_flood_probability = self.perceived_flood_probability + 0.4</span>
+
+    <span class="s2">def </span><span class="s1">construct_perceived_costs_of_measures</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">neighbors </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">model</span><span class="s3">.</span><span class="s1">grid</span><span class="s3">.</span><span class="s1">get_neighbors</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">pos</span><span class="s3">, </span><span class="s1">include_center</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)</span>
+
+        <span class="s2">for </span><span class="s1">neighbor </span><span class="s2">in </span><span class="s1">neighbors</span><span class="s3">:</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_costs_of_measures </span><span class="s3">= (</span><span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_costs_of_measures </span><span class="s3">* (</span><span class="s5">1 </span><span class="s3">- </span><span class="s1">neighbor</span><span class="s3">.</span><span class="s1">trust_factor</span><span class="s3">) +</span>
+                                                <span class="s1">neighbor</span><span class="s3">.</span><span class="s1">trust_factor </span><span class="s3">* </span><span class="s1">neighbor</span><span class="s3">.</span><span class="s1">perceived_costs_of_measures</span><span class="s3">)</span>
+
+        <span class="s0"># TO DO: write part of function where perceived costs of measures is influenced by government</span>
+        <span class="s0"># kan soortgelijk iets als bij flood_probability gedaan worden</span>
+    <span class="s2">def </span><span class="s1">construct_perceived_flood_damage</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_damage </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">size_of_house </span><span class="s3">* </span><span class="s1">self</span><span class="s3">.</span><span class="s1">max_damage_dol_per_sqm </span><span class="s3">* </span><span class="s1">self</span><span class="s3">.</span><span class="s1">flood_damage_estimated</span>
+        <span class="s0"># print(&quot;Flood depth:&quot; + str(self.flood_depth_estimated))</span>
+        <span class="s0"># print(&quot;Flood damage:&quot; + str(self.perceived_flood_damage))</span>
+
+    <span class="s2">def </span><span class="s1">construct_perceived_effectiveness_of_measures</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s0"># effectiveness ratio: costs of measures divided by damage reducement</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_effectiveness_of_measures </span><span class="s3">= (</span><span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_costs_of_measures </span><span class="s3">/</span>
+                                                    <span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_damage</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">consider_fine</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s6">&quot;Considering fine&quot;</span><span class="s3">)</span>
+        <span class="s0"># building block where household takes into account the fine of the government if it doesnt adapt</span>
+
+    <span class="s2">def </span><span class="s1">reconsider_adaptation_measures</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_flood_probability </span><span class="s3">&gt; </span><span class="s5">0.4 </span><span class="s2">and </span><span class="s1">random</span><span class="s3">.</span><span class="s1">random</span><span class="s3">() &gt; </span><span class="s5">0.3</span><span class="s3">:</span>
+            <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">perceived_effectiveness_of_measures </span><span class="s3">&lt; </span><span class="s5">1 </span><span class="s2">and </span><span class="s1">random</span><span class="s3">.</span><span class="s1">random</span><span class="s3">() &gt; </span><span class="s5">0.3</span><span class="s3">:</span>
+        <span class="s0"># of ipv de if functies kunnen we een soort formule schrijven</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">desire_to_take_measures </span><span class="s3">= </span><span class="s2">True</span>
+            <span class="s2">else</span><span class="s3">:</span>
+                <span class="s2">return</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s2">return</span>
+
+    <span class="s2">def </span><span class="s1">take_adaptation_measures</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">taken_measures </span><span class="s3">&lt; </span><span class="s5">1 </span><span class="s2">and </span><span class="s1">self</span><span class="s3">.</span><span class="s1">desire_to_take_measures </span><span class="s3">== </span><span class="s2">True</span><span class="s3">:</span>
+            <span class="s0"># ervan uitgaande dat mensen 80% van hun spaargeld aan adaptation uit willen geven</span>
+            <span class="s1">money_to_spend_on_measures </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">money_saved </span><span class="s3">* </span><span class="s5">0.8</span>
+            <span class="s1">elevation_costs </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">size_of_house </span><span class="s3">* </span><span class="s1">self</span><span class="s3">.</span><span class="s1">elevation_costs_per_square_metre</span>
+            <span class="s2">if </span><span class="s1">money_to_spend_on_measures </span><span class="s3">&gt;= </span><span class="s1">elevation_costs</span><span class="s3">:</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">taken_measures </span><span class="s3">= </span><span class="s5">1</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">money_saved </span><span class="s3">-= </span><span class="s1">elevation_costs</span>
+            <span class="s2">elif </span><span class="s5">1.000 </span><span class="s3">&lt; </span><span class="s1">money_to_spend_on_measures </span><span class="s3">&lt; </span><span class="s1">elevation_costs</span><span class="s3">:</span>
+                <span class="s0"># adds a ratio of the complete elevation to the level of adaption, based on how much someone is able to spend</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">taken_measures </span><span class="s3">+= (</span><span class="s1">money_to_spend_on_measures </span><span class="s3">/ </span><span class="s1">elevation_costs</span><span class="s3">)</span>
+            <span class="s2">else</span><span class="s3">:</span>
+                <span class="s2">return</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s2">return</span>
+
+    <span class="s2">def </span><span class="s1">step</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s6">&quot;Hi, I am agent &quot; </span><span class="s3">+ </span><span class="s1">str</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">unique_id</span><span class="s3">) + </span><span class="s6">&quot;.&quot;</span><span class="s3">)</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">save_money</span><span class="s3">()</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">construct_perceived_flood_probability</span><span class="s3">()</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">construct_perceived_flood_damage</span><span class="s3">()</span>
+        <span class="s0"># self.construct_perceived_costs_of_measures()</span>
+        <span class="s0"># self.construct_perceived_flood_damage()</span>
+        <span class="s0"># self.construct_perceived_effectiveness_of_measures()</span>
+        <span class="s0"># self.consider_fine()</span>
+        <span class="s0"># self.reconsider_adaptation_measures()</span>
+        <span class="s0"># self.take_adaptation_measures ()</span>
+
+        <span class="s0"># Logic for adaptation based on estimated flood damage and a random chance.</span>
+        <span class="s0"># dit kan wel weggehaald worden</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">flood_damage_estimated </span><span class="s3">&gt; </span><span class="s5">0.15 </span><span class="s2">and </span><span class="s1">random</span><span class="s3">.</span><span class="s1">random</span><span class="s3">() &lt; </span><span class="s5">0.2</span><span class="s3">:</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">is_adapted </span><span class="s3">= </span><span class="s2">True  </span><span class="s0"># Agent adapts to flooding</span>
+
+
+<span class="s0"># Define the Government agent class</span>
+<span class="s2">class </span><span class="s1">Government</span><span class="s3">(</span><span class="s1">Agent</span><span class="s3">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    A government agent that currently doesn't perform any actions. 
+    &quot;&quot;&quot;</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">):</span>
+        <span class="s1">super</span><span class="s3">().</span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">)</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">flood_warning </span><span class="s3">= </span><span class="s6">&quot;Low&quot;</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">subsidies </span><span class="s3">= </span><span class="s5">0</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">regulations </span><span class="s3">= </span><span class="s5">0</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">infrastructure </span><span class="s3">= </span><span class="s5">0</span>
+
+    <span class="s2">def </span><span class="s1">step</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s0"># The government agent doesn't perform any actions.</span>
+        <span class="s2">pass</span>
+
+
+<span class="s0"># define Insurance agent</span>
+<span class="s2">class </span><span class="s1">Insurance</span><span class="s3">(</span><span class="s1">Agent</span><span class="s3">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    An insurance agent that currently doesn't perform any actions. 
+    &quot;&quot;&quot;</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">):</span>
+        <span class="s1">super</span><span class="s3">().</span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">unique_id</span><span class="s3">, </span><span class="s1">model</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">step</span><span class="s3">(</span><span class="s1">self</span><span class="s3">):</span>
+        <span class="s0"># The insurance agent doesn't perform any actions yet.</span>
+        <span class="s2">pass</span>
+
+<span class="s0"># More agent classes can be added here, e.g. for insurance agents.</span>
+</pre>
+</body>
+</html>

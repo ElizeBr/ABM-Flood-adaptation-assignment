@@ -1,0 +1,173 @@
+<html>
+<head>
+<title>demo.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+demo.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">{ 
+ &quot;cells&quot;: [ 
+  { 
+   &quot;attachments&quot;: {}, 
+   &quot;cell_type&quot;: &quot;markdown&quot;, 
+   &quot;metadata&quot;: {}, 
+   &quot;source&quot;: [ 
+    &quot;# Flood Adaptation: Minimal Model&quot; 
+   ] 
+  }, 
+  { 
+   &quot;attachments&quot;: {}, 
+   &quot;cell_type&quot;: &quot;markdown&quot;, 
+   &quot;metadata&quot;: {}, 
+   &quot;source&quot;: [ 
+    &quot;This python script outlines a basic Agent-Based Model (ABM) developed using the Mesa framework, designed as a simplified representation of household adaptation to flood events in a social network context. The model serves as a template for understanding the fundamental mechanics of flood adapdtation with a given social network.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;This directory is structured as follows:\n&quot;, 
+    &quot; - A Mesa Agent class `Households` is defined in `agents.py`\n&quot;, 
+    &quot; - A Mesa Agent class `Government` is defined in `agents.py` (this agent currently does not perform any action)\n&quot;, 
+    &quot; - A Mesa Model class `AdaptationModel` is defined in `model.py`\n&quot;, 
+    &quot; - This notebook `demo.ipynb` provides a demonstration of the model and its visualization.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;Each household agent in the model represents a household with attributes and behaviors that determine its response to flood events. The flood depth attribute assigned to each household is currently random for demonstration purposes. The decision by each household to adapt is also arbitrary. In a more comprehensive model, this could be replaced with more sophisticated decision-making algorithms.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;The current implementation includes several simplifications and arbitrary choices, such as random flood depths and basic adaptation logic based on random thresholds. These aspects are designed for clarity and ease of understanding and should be replaced with realistic and sound choices.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;You are encouraged to modify, expand, and customize the model. This might include integrating real-world data, implementing more complex decision-making processes for agents, or exploring different network topologies and their effects on social dynamics.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;The visualisation provided is basic. Additional aspects can be added for visualization and more in-depth analysis.\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;_This notebook was tested on 2023-11-13 with Mesa version 2.1.4 on Python 3.12.0._&quot; 
+   ] 
+  }, 
+  { 
+   &quot;attachments&quot;: {}, 
+   &quot;cell_type&quot;: &quot;markdown&quot;, 
+   &quot;metadata&quot;: {}, 
+   &quot;source&quot;: [ 
+    &quot;# Running the model and visualizing the model domain and social network over time&quot; 
+   ] 
+  }, 
+  { 
+   &quot;cell_type&quot;: &quot;code&quot;, 
+   &quot;execution_count&quot;: null, 
+   &quot;metadata&quot;: { 
+    &quot;is_executing&quot;: true 
+   }, 
+   &quot;outputs&quot;: [], 
+   &quot;source&quot;: [ 
+    &quot;from model import AdaptationModel\n&quot;, 
+    &quot;import matplotlib.pyplot as plt\n&quot;, 
+    &quot;import networkx as nx\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Initialize the Adaptation Model with 50 household agents.\n&quot;, 
+    &quot;model = AdaptationModel(number_of_households=50, flood_map_choice=\&quot;harvey\&quot;, network=\&quot;watts_strogatz\&quot;) # flood_map_choice can be \&quot;harvey\&quot;, \&quot;100yr\&quot;, or \&quot;500yr\&quot;\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Calculate positions of nodes for the network plot.\n&quot;, 
+    &quot;# The spring_layout function positions nodes using a force-directed algorithm,\n&quot;, 
+    &quot;# which helps visualize the structure of the social network.\n&quot;, 
+    &quot;pos = nx.spring_layout(model.G)\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Define a function to plot agents on the network.\n&quot;, 
+    &quot;# This function takes a matplotlib axes object and the model as inputs.\n&quot;, 
+    &quot;def plot_network(ax, model):\n&quot;, 
+    &quot;    # Clear the current axes.\n&quot;, 
+    &quot;    ax.clear()\n&quot;, 
+    &quot;    # Determine the color of each node (agent) based on their adaptation status.\n&quot;, 
+    &quot;    colors = ['blue' if agent.is_adapted else 'red' for agent in model.schedule.agents]\n&quot;, 
+    &quot;    # Draw the network with node colors and labels.\n&quot;, 
+    &quot;    nx.draw(model.G, pos, node_color=colors, with_labels=True, ax=ax)\n&quot;, 
+    &quot;    # Set the title of the plot with the current step number.\n&quot;, 
+    &quot;    ax.set_title(f\&quot;Social Network State at Step {model.schedule.steps}\&quot;, fontsize=12)\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Generate the initial plots at step 0.\n&quot;, 
+    &quot;# Plot the spatial distribution of agents. This is a function written in the model.py\n&quot;, 
+    &quot;model.plot_model_domain_with_agents()\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Plot the initial state of the social network.\n&quot;, 
+    &quot;fig, ax = plt.subplots(figsize=(7, 7))\n&quot;, 
+    &quot;plot_network(ax, model)\n&quot;, 
+    &quot;plt.show()\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;# Run the model for 20 steps and generate plots every 5 steps.\n&quot;, 
+    &quot;for step in range(20):\n&quot;, 
+    &quot;    model.step()\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;    # Every 5 steps, generate and display plots for both the spatial distribution and network.\n&quot;, 
+    &quot;    # Note the first step is step 0, so the plots will be generated at steps 4, 9, 14, and 19, which are the 5th, 10th, 15th, and 20th steps.\n&quot;, 
+    &quot;    if (step + 1) % 5 == 0:\n&quot;, 
+    &quot;        # Plot for the spatial map showing agent locations and adaptation status.\n&quot;, 
+    &quot;        plt.figure(figsize=(10, 6))\n&quot;, 
+    &quot;        model.plot_model_domain_with_agents()\n&quot;, 
+    &quot;\n&quot;, 
+    &quot;        # Plot for the social network showing connections and adaptation statuses.\n&quot;, 
+    &quot;        fig, ax = plt.subplots(figsize=(7, 7))\n&quot;, 
+    &quot;        plot_network(ax, model)\n&quot;, 
+    &quot;        plt.show()&quot; 
+   ] 
+  }, 
+  { 
+   &quot;cell_type&quot;: &quot;code&quot;, 
+   &quot;execution_count&quot;: null, 
+   &quot;metadata&quot;: {}, 
+   &quot;outputs&quot;: [], 
+   &quot;source&quot;: [ 
+    &quot;agent_data = model.datacollector.get_agent_vars_dataframe()\n&quot;, 
+    &quot;agent_data\n&quot; 
+   ] 
+  }, 
+  { 
+   &quot;cell_type&quot;: &quot;code&quot;, 
+   &quot;execution_count&quot;: null, 
+   &quot;metadata&quot;: {}, 
+   &quot;outputs&quot;: [], 
+   &quot;source&quot;: [ 
+    &quot;model_data = model.datacollector.get_model_vars_dataframe()\n&quot;, 
+    &quot;model_data&quot; 
+   ] 
+  }, 
+  { 
+   &quot;cell_type&quot;: &quot;code&quot;, 
+   &quot;execution_count&quot;: null, 
+   &quot;metadata&quot;: {}, 
+   &quot;outputs&quot;: [], 
+   &quot;source&quot;: [] 
+  } 
+ ], 
+ &quot;metadata&quot;: { 
+  &quot;kernelspec&quot;: { 
+   &quot;display_name&quot;: &quot;tb231c&quot;, 
+   &quot;language&quot;: &quot;python&quot;, 
+   &quot;name&quot;: &quot;python3&quot; 
+  }, 
+  &quot;language_info&quot;: { 
+   &quot;codemirror_mode&quot;: { 
+    &quot;name&quot;: &quot;ipython&quot;, 
+    &quot;version&quot;: 3 
+   }, 
+   &quot;file_extension&quot;: &quot;.py&quot;, 
+   &quot;mimetype&quot;: &quot;text/x-python&quot;, 
+   &quot;name&quot;: &quot;python&quot;, 
+   &quot;nbconvert_exporter&quot;: &quot;python&quot;, 
+   &quot;pygments_lexer&quot;: &quot;ipython3&quot;, 
+   &quot;version&quot;: &quot;3.9.15&quot; 
+  }, 
+  &quot;orig_nbformat&quot;: 4, 
+  &quot;vscode&quot;: { 
+   &quot;interpreter&quot;: { 
+    &quot;hash&quot;: &quot;ba734c44879edc1aadd96d1483e3c8c4b172ceac85e15a48cc8368b614d0488f&quot; 
+   } 
+  } 
+ }, 
+ &quot;nbformat&quot;: 4, 
+ &quot;nbformat_minor&quot;: 2 
+} 
+</span></pre>
+</body>
+</html>
