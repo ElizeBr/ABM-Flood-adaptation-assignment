@@ -64,11 +64,10 @@ class Households(Agent):
         self.trust_factor = random.uniform(0,0.1)
         self.fine = fine
         self.taken_measures = random.random()
-        self.taken_measures_list = []
         self.perceived_flood_probability = random.random()
         self.perceived_costs_of_measures = self.elevation_costs_per_square_metre * self.size_of_house
         self.perceived_flood_damage = None
-        self.perceived_effectiveness_of_measures = 5
+        self.perceived_effectiveness_of_measures = None
         self.desire_to_take_measures = False
 
     # Function to count friends who can be influential.
@@ -80,8 +79,8 @@ class Households(Agent):
     def save_money(self):
         # print("Money before savings:" + str(self.money_saved))
         # print("Income" + str(self.income))
-        self.money_saved += self.income * 0.05  # assumming that 5% of income are savings
-        # print("Money saved: " + str(self.money_saved))
+        self.money_saved += self.income * 0.05
+        # print("Money saved after one round: " + str(self.money_saved))
 
     def construct_perceived_flood_probability(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
@@ -89,24 +88,15 @@ class Households(Agent):
         # neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
         # print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
 
-        # @ Finn, discount rate moet voor de for-loop, want nu wordt de discount rate afgetrokken voor elke neighbour,
-        # en het moet maar 1 keer per ronde --- Finn: gefixt
-        self.perceived_flood_probability = self.discount_rate * self.perceived_flood_probability  #waarom ervoor? -> verslag
+        self.perceived_flood_probability = self.discount_rate * self.perceived_flood_probability
         for neighbor in neighbors:
             if isinstance(neighbor, Households):
                 self.perceived_flood_probability = (
-                        self.perceived_flood_probability * (1 - neighbor.trust_factor) +
-                        neighbor.trust_factor * neighbor.perceived_flood_probability)
+                    self.perceived_flood_probability * (1 - neighbor.trust_factor) +
+                    neighbor.trust_factor * neighbor.perceived_flood_probability)
+
             #government doet ook hier iets voor, maar dan in de government agent
 
-    def construct_perceived_costs_of_measures(self):
-        neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-
-        for neighbor in neighbors:
-            self.perceived_costs_of_measures = (self.perceived_costs_of_measures * (1 - neighbor.trust_factor) +
-                                                neighbor.trust_factor * neighbor.perceived_costs_of_measures)
-
-        # kan soortgelijk iets als bij flood_probability gedaan worden
     def construct_perceived_flood_damage(self):
         self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
         # print("Flood depth:" + str(self.flood_depth_estimated))
@@ -114,22 +104,10 @@ class Households(Agent):
 
     def construct_perceived_effectiveness_of_measures(self):
         # effectiveness ratio: costs of measures divided by damage reducement
-        self.perceived_effectiveness_of_measures = (self.perceived_costs_of_measures /
-                                                    self.perceived_flood_damage)
-
-    def consider_fine(self):
-        print("Considering fine")
-        # building block where household takes into account the fine of the government if it doesnt adapt
+        # when above 1, thought to be effective
+        self.perceived_effectiveness_of_measures = (self.perceived_flood_damage/ self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
-        # if self.perceived_flood_probability > 0.4 and random.random() > 0.3: #waarom hier een random functie?
-        #     if self.perceived_effectiveness_of_measures < 1 and random.random() > 0.3:
-        # # of ipv de if functies kunnen we een soort formule schrijven
-        #         self.desire_to_take_measures = True
-        #     else:
-        #         return
-        # else:
-        #     return
         # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
         treshold = 5
         if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
@@ -141,8 +119,7 @@ class Households(Agent):
 
     def take_adaptation_measures(self):
         if self.taken_measures < 1 and self.desire_to_take_measures == True:
-            # ervan uitgaande dat mensen 80% van hun spaargeld aan adaptation uit willen geven
-            money_to_spend_on_measures = self.money_saved * 0.8
+            money_to_spend_on_measures = self.money_saved
             elevation_costs = self.size_of_house * self.elevation_costs_per_square_metre
             if money_to_spend_on_measures >= elevation_costs:
                 self.taken_measures = 1
@@ -160,17 +137,13 @@ class Households(Agent):
         self.save_money()
         self.construct_perceived_flood_probability()
         self.construct_perceived_flood_damage()
-        # self.construct_perceived_costs_of_measures()
-        # self.construct_perceived_flood_damage()
-        # self.construct_perceived_effectiveness_of_measures()
-        # self.consider_fine()
-        # self.reconsider_adaptation_measures()
-        # self.take_adaptation_measures ()
+        self.construct_perceived_effectiveness_of_measures()
+        self.reconsider_adaptation_measures()
+        self.take_adaptation_measures()
 
         # Logic for adaptation based on estimated flood damage and a random chance.
-        # dit kan wel weggehaald worden
-        if self.flood_damage_estimated > 0.15 and random.random() < 0.2:
-            self.is_adapted = True  # Agent adapts to flooding
+        if self.taken_measures > 0.8:
+            self.is_adapted = True
 
 
 # Define the Government agent class
