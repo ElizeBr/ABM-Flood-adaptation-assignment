@@ -109,13 +109,13 @@ class Households(Agent):
 
     def reconsider_adaptation_measures(self):
         # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
-        adaptation_treshold = 100
-        leaning_towards_adaptation = self.perceived_flood_probability * self.perceived_effectiveness_of_measures
-        #print(f"probability: {self.perceived_flood_probability}")
-        #print(f"flood damage: {self.perceived_flood_damage}")
-        #print(f"cost of measures: {self.perceived_costs_of_measures}")
-        #print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
-        #print(f"leaning towards measures:{leaning_towards_adaptation}")
+        adaptation_treshold = 1.2
+        leaning_towards_adaptation = (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures
+        print(f"probability: {self.perceived_flood_probability}")
+        print(f"flood damage: {self.perceived_flood_damage}")
+        print(f"cost of measures: {self.perceived_costs_of_measures}")
+        print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
+        print(f"leaning towards measures:{leaning_towards_adaptation}")
         if (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures >= adaptation_treshold: #flood probability is multiplied by 2 so that is has more or less equal influence in the decissionmaking as the effectiveness
             self.desire_to_take_measures = True
         #if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
@@ -148,11 +148,12 @@ class Households(Agent):
         self.construct_perceived_effectiveness_of_measures()
         self.reconsider_adaptation_measures()
         self.take_adaptation_measures()
-        print(self.is_adapted)
 
         if self.taken_measures > 0.8:
             self.is_adapted = True
 
+        print(f"Desire to take measure: {self.desire_to_take_measures}")
+        print(f"Adapted: {self.is_adapted}")
 
 # Define the Government agent class
 class Government(Agent):

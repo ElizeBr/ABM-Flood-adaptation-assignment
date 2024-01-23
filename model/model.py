@@ -96,6 +96,7 @@ class AdaptationModel(Model):
                         "FloodDamageEstimated" : "flood_damage_estimated",
                         "FloodDepthActual": "flood_depth_actual",
                         "FloodDamageActual" : "flood_damage_actual",
+                        "DesireToTakeMeasures" : "desire_to_take_measures",
                         "IsAdapted": "is_adapted",
                         "FriendsCount": lambda a: a.count_friends(radius=1),
                         "location":"location",
