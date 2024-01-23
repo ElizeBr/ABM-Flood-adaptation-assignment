@@ -100,7 +100,7 @@ class Households(Agent):
     def construct_perceived_flood_damage(self):
         self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
         # print("Flood depth:" + str(self.flood_depth_estimated))
-        # print("Flood damage:" + str(self.perceived_flood_damage))
+        print("Flood damage:" + str(self.perceived_flood_damage))
 
     def construct_perceived_effectiveness_of_measures(self):
         # effectiveness ratio: costs of measures divided by damage reduction
@@ -108,7 +108,19 @@ class Households(Agent):
         self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
-        # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
+        if self.perceived_effectiveness_of_measures > 4 and self.perceived_flood_probability > 0.3:
+            self.desire_to_take_measures = True
+        elif self.perceived_effectiveness_of_measures > 3 and self.perceived_flood_probability > 0.5:
+            self.desire_to_take_measures = True
+        elif self.perceived_effectiveness_of_measures > 2 and self.perceived_flood_probability > 0.7:
+            self.desire_to_take_measures = True
+        elif self.perceived_effectiveness_of_measures > 1.5 and self.perceived_flood_probability > 0.8:
+            self.desire_to_take_measures = True
+        elif self.perceived_effectiveness_of_measures > 1 and self.perceived_flood_probability > 0.85:
+            self.desire_to_take_measures = True
+        else:
+            self.desire_to_take_measures = False
+        ## willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
         adaptation_treshold = 1.2
         leaning_towards_adaptation = (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures
         print(f"probability: {self.perceived_flood_probability}")
