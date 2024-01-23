@@ -51,7 +51,7 @@ class Households(Agent):
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
         self.flood_damage_final = 0
         self.discount_rate = 0.98
-        self.elevation_costs_per_square_metre = 220.982  # argumented in report
+        self.elevation_costs_per_square_metre = 300
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
 
         # range around average house size (159.14 square meters)
@@ -103,15 +103,23 @@ class Households(Agent):
         # print("Flood damage:" + str(self.perceived_flood_damage))
 
     def construct_perceived_effectiveness_of_measures(self):
-        # effectiveness ratio: costs of measures divided by damage reducement
+        # effectiveness ratio: costs of measures divided by damage reduction
         # when above 1, thought to be effective
-        self.perceived_effectiveness_of_measures = (self.perceived_flood_damage/ self.perceived_costs_of_measures)
+        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
         # willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
-        treshold = 5
-        if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
+        adaptation_treshold = 100
+        leaning_towards_adaptation = self.perceived_flood_probability * self.perceived_effectiveness_of_measures
+        #print(f"probability: {self.perceived_flood_probability}")
+        #print(f"flood damage: {self.perceived_flood_damage}")
+        #print(f"cost of measures: {self.perceived_costs_of_measures}")
+        #print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
+        #print(f"leaning towards measures:{leaning_towards_adaptation}")
+        if (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures >= adaptation_treshold: #flood probability is multiplied by 2 so that is has more or less equal influence in the decissionmaking as the effectiveness
             self.desire_to_take_measures = True
+        #if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
+
         else:
             self.desire_to_take_measures = False
 
@@ -140,8 +148,8 @@ class Households(Agent):
         self.construct_perceived_effectiveness_of_measures()
         self.reconsider_adaptation_measures()
         self.take_adaptation_measures()
+        print(self.is_adapted)
 
-        # Logic for adaptation based on estimated flood damage and a random chance.
         if self.taken_measures > 0.8:
             self.is_adapted = True
 
@@ -152,7 +160,7 @@ class Government(Agent):
     A government agent that currently doesn't perform any actions.
     """
 
-    def __init__(self, unique_id, model,fine = 0):
+    def __init__(self, unique_id, model, fine = 0):
         super().__init__(unique_id, model)
 
         self.flood_warning = "Low"
@@ -175,6 +183,7 @@ class Government(Agent):
             flood_warning_effectiveness = 0.4
 
         # Zelfde for loop als bij de households, moet nog wel gecheckt worden welke waarden er goed bij passen
+        # mogelijk bij timestep 10, 20, 30, 40, 50 doen
         for agent in schedule_of_households:
             if isinstance(agent, Households):
                 agent.perceived_flood_probability = (
@@ -200,6 +209,7 @@ class Government(Agent):
             self.fine_household(household)
 
     def check_all_households(self):
+        # mogelijk if statement maken dat dit bij bepaalde time steps gedaan wordt
         for household in self.household_list:
             if isinstance(household, Households):
                 self.check_certification(household)

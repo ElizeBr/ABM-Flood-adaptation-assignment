@@ -43,7 +43,7 @@ class AdaptationModel(Model):
                  number_of_edges = 3,
                  # number of nearest neighbours for WS social network
                  number_of_nearest_neighbours = 5,
-                 fine = 1
+                 fine = 1000
                  ):
         
         super().__init__(seed = seed)
