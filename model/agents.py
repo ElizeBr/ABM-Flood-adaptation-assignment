@@ -120,7 +120,7 @@ class Households(Agent):
         # effectiveness ratio: costs of measures divided by damage reduction
         # when above 1, thought to be effective
         # fine is multiplied by 8 to show that households take into account that fines are fines multiple times
-        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine*8) / self.perceived_costs_of_measures)
+        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine*5) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
         if self.perceived_effectiveness_of_measures > 4 and self.perceived_flood_probability > 0.2:
@@ -205,11 +205,10 @@ class Government(Agent):
         if self.flood_warning == "Low":
             flood_warning_effectiveness = 0
         elif self.flood_warning == "Medium":
-            flood_warning_effectiveness = 0.2
-        elif self.flood_warning == "High":
             flood_warning_effectiveness = 0.1
+        elif self.flood_warning == "High":
+            flood_warning_effectiveness = 0.2
 
-        # Zelfde for loop als bij de households, moet nog wel gecheckt worden welke waarden er goed bij passen
         for agent in schedule_of_households:
             if isinstance(agent, Households):
                 agent.perceived_flood_probability = (
@@ -239,13 +238,14 @@ class Government(Agent):
         #There is a chance for every household that they are checked.
         for household in self.household_list:
             if isinstance(household, Households):
-                if random.random() < 0.3:
-                    self.check_certification(household)
+                self.check_certification(household)
 
     def step(self):
         self.step_counter += 1
 
-        self.check_all_households()
+        if (self.step_counter+1) % 8 == 0:
+            self.check_all_households()
+
         if (self.step_counter+1) % 10 == 0:
             self.warn_households(self.household_list)
 
