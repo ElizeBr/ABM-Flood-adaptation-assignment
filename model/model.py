@@ -25,7 +25,7 @@ class AdaptationModel(Model):
     simulates their behavior, and collects data. The network type can be adjusted based on study requirements.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  seed = None,
                  number_of_households = 25, # number of household agents
                  # flood damage related: from Huizinga, de Moel --> damage factor
@@ -45,7 +45,7 @@ class AdaptationModel(Model):
                  number_of_nearest_neighbours = 5,
                  fine = 1000
                  ):
-        
+
         super().__init__(seed = seed)
 
         self.total_damage = 0.0
@@ -59,6 +59,8 @@ class AdaptationModel(Model):
         self.probability_of_network_connection = probability_of_network_connection
         self.number_of_edges = number_of_edges
         self.number_of_nearest_neighbours = number_of_nearest_neighbours
+
+        self.average_perceived_flood_probability_over_time = []
 
         # generating the graph according to the network used and the network parameters specified
         self.G = self.initialize_network()
@@ -88,11 +90,12 @@ class AdaptationModel(Model):
         model_metrics = {
                         "total_adapted_households": self.total_adapted_households,
                         "total_flood_damage": self.total_flood_damage,
-                        "whatif_damage": self.whatif_damage,
+                        "whatif_damage": self.whatif_damage
             # ... other reporters ...""
                         }
-        
-        agent_metrics = {
+
+        agent_metrics = {"PerceivedEffectiveness": "perceived_effectiveness_of_measures",
+                        "PerceivedFloodProbability" : "perceived_flood_probability",
                         "FloodDepthEstimated": "flood_depth_estimated",
                         "FloodDamageEstimated" : "flood_damage_estimated",
                         "FloodDepthActual": "flood_depth_actual",
@@ -102,12 +105,12 @@ class AdaptationModel(Model):
                         "FriendsCount": lambda a: a.count_friends(radius=1),
                         "location":"location",
                         "MoneySaved": "money_saved",
-                        "FinedTotal": "fined_total",
+                        "FinedTotal": "fined_total"
                         # ... other reporters ...
                         }
-        #set up the data collector 
+        #set up the data collector
         self.datacollector = DataCollector(model_reporters=model_metrics,agent_reporters=agent_metrics)
-            
+
 
     def initialize_network(self):
         """
@@ -205,14 +208,19 @@ class AdaptationModel(Model):
 
     def step(self):
         """
-        introducing a shock: 
+        introducing a shock:
         at time step 5, there will be a global flooding.
         This will result in actual flood depth. Here, we assume it is a random number
         between 0.5 and 1.2 of the estimated flood depth. In your model, you can replace this
         with a more sound procedure (e.g., you can divide the flood map into zones and
-        assume local flooding instead of global flooding). The actual flood depth can be 
+        assume local flooding instead of global flooding). The actual flood depth can be
         estimated differently
         """
+        average_perceived_flood_probability = sum(agent.perceived_flood_probability for agent in self.schedule.agents if isinstance(agent, Households)) / self.number_of_households
+
+        # Append the current average to the list
+        self.average_perceived_flood_probability_over_time.append(average_perceived_flood_probability)
+
         #opzet voor functie om totale schade bij een flooding te berekenen, kan uiteindelijk geintegreeerd worden in de if functie hieronder
         # for agent in self.schedule.agents:
         #     if isinstance(agent, Households):

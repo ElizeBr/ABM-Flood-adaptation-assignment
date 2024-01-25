@@ -64,8 +64,8 @@ class Households(Agent):
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
         self.flood_damage_final = 0
         self.whatif_damage = 0
-        self.discount_rate = 0.98
-        self.elevation_costs_per_square_metre = 300
+        self.discount_rate = 0.99
+        self.elevation_costs_per_square_metre = 290
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
 
         # range around average house size (159.14 square meters)
@@ -114,7 +114,7 @@ class Households(Agent):
     def construct_perceived_flood_damage(self):
         self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
         # print("Flood depth:" + str(self.flood_depth_estimated))
-        print("Flood damage:" + str(self.perceived_flood_damage))
+        #print("Flood damage:" + str(self.perceived_flood_damage))
 
     def construct_perceived_effectiveness_of_measures(self):
         # effectiveness ratio: costs of measures divided by damage reduction
@@ -123,26 +123,26 @@ class Households(Agent):
         self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine*8) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
-        if self.perceived_effectiveness_of_measures > 4 and self.perceived_flood_probability > 0.3:
+        if self.perceived_effectiveness_of_measures > 4 and self.perceived_flood_probability > 0.2:
             self.desire_to_take_measures = True
-        elif self.perceived_effectiveness_of_measures > 3 and self.perceived_flood_probability > 0.5:
+        elif self.perceived_effectiveness_of_measures > 3 and self.perceived_flood_probability > 0.4:
             self.desire_to_take_measures = True
-        elif self.perceived_effectiveness_of_measures > 2 and self.perceived_flood_probability > 0.7:
+        elif self.perceived_effectiveness_of_measures > 2 and self.perceived_flood_probability > 0.6:
             self.desire_to_take_measures = True
         elif self.perceived_effectiveness_of_measures > 1.5 and self.perceived_flood_probability > 0.8:
             self.desire_to_take_measures = True
-        elif self.perceived_effectiveness_of_measures > 1 and self.perceived_flood_probability > 0.85:
+        elif self.perceived_effectiveness_of_measures > 1 and self.perceived_flood_probability > 0.9:
             self.desire_to_take_measures = True
         else:
             self.desire_to_take_measures = False
         ## willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
         adaptation_treshold = 1.2
-        # leaning_towards_adaptation = (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures
-        # print(f"probability: {self.perceived_flood_probability}")
-        # print(f"flood damage: {self.perceived_flood_damage}")
-        # print(f"cost of measures: {self.perceived_costs_of_measures}")
-        # print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
-        # print(f"leaning towards measures:{leaning_towards_adaptation}")
+        leaning_towards_adaptation = (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures
+        #print(f"probability: {self.perceived_flood_probability}")
+        #print(f"flood damage: {self.perceived_flood_damage}")
+        #print(f"cost of measures: {self.perceived_costs_of_measures}")
+        #print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
+        #print(f"leaning towards measures:{leaning_towards_adaptation}")
         # if (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures >= adaptation_treshold: #flood probability is multiplied by 2 so that is has more or less equal influence in the decissionmaking as the effectiveness
         #     self.desire_to_take_measures = True
         # #if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
@@ -166,7 +166,7 @@ class Households(Agent):
             return
 
     def step(self):
-        print("Hi, I am agent " + str(self.unique_id) + ".")
+        #print("Hi, I am agent " + str(self.unique_id) + ".")
         self.save_money()
         self.construct_perceived_flood_probability()
         self.construct_perceived_flood_damage()
@@ -177,8 +177,8 @@ class Households(Agent):
         if self.taken_measures > 0.8:
             self.is_adapted = True
 
-        print(f"Desire to take measure: {self.desire_to_take_measures}")
-        print(f"Adapted: {self.is_adapted}")
+        #print(f"Desire to take measure: {self.desire_to_take_measures}")
+        #print(f"Adapted: {self.is_adapted}")
 
 # Define the Government agent class
 class Government(Agent):
@@ -189,7 +189,7 @@ class Government(Agent):
     def __init__(self, unique_id, model, fine = 0):
         super().__init__(unique_id, model)
 
-        self.flood_warning = "Low"
+        self.flood_warning = "Medium"
         self.subsidies = 0
         self.regulations = 0.2
         self.infrastructure = 0
@@ -199,6 +199,7 @@ class Government(Agent):
         self.household_list= []
         self.fined_household_list= []
         self.fined_total = 0
+        self.step_counter = 0
     def warn_households(self, schedule_of_households): #gebruik een list van de households, schedule voor volgorde.
         flood_warning_effectiveness = 0
         if self.flood_warning == "Low":
@@ -206,10 +207,9 @@ class Government(Agent):
         elif self.flood_warning == "Medium":
             flood_warning_effectiveness = 0.2
         elif self.flood_warning == "High":
-            flood_warning_effectiveness = 0.4
+            flood_warning_effectiveness = 0.1
 
         # Zelfde for loop als bij de households, moet nog wel gecheckt worden welke waarden er goed bij passen
-        # mogelijk bij timestep 10, 20, 30, 40, 50 doen
         for agent in schedule_of_households:
             if isinstance(agent, Households):
                 agent.perceived_flood_probability = (
@@ -243,8 +243,11 @@ class Government(Agent):
                     self.check_certification(household)
 
     def step(self):
+        self.step_counter += 1
+
         self.check_all_households()
-        #warn_households(self.household_list)
+        if (self.step_counter+1) % 10 == 0:
+            self.warn_households(self.household_list)
 
 # define Insurance agent
 class Insurance(Agent):
