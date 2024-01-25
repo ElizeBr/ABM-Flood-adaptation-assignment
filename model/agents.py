@@ -119,7 +119,8 @@ class Households(Agent):
     def construct_perceived_effectiveness_of_measures(self):
         # effectiveness ratio: costs of measures divided by damage reduction
         # when above 1, thought to be effective
-        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine) / self.perceived_costs_of_measures)
+        # fine is multiplied by 8 to show that households take into account that fines are fines multiple times
+        self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine*8) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
         if self.perceived_effectiveness_of_measures > 4 and self.perceived_flood_probability > 0.3:

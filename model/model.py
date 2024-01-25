@@ -103,7 +103,6 @@ class AdaptationModel(Model):
                         "location":"location",
                         "MoneySaved": "money_saved",
                         "FinedTotal": "fined_total",
-                        #"FloodMeasures" : self.taken_measures_list
                         # ... other reporters ...
                         }
         #set up the data collector 
@@ -215,15 +214,15 @@ class AdaptationModel(Model):
         estimated differently
         """
         #opzet voor functie om totale schade bij een flooding te berekenen, kan uiteindelijk geintegreeerd worden in de if functie hieronder
-        for agent in self.schedule.agents:
-            if isinstance(agent, Households):
-            # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
-                agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
-            # calculate the actual flood damage given the actual flood depth
-                agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
-                agent.flood_damage_monetary_value = agent.flood_damage_actual*self.max_damage_dol_per_sqm
-                self.total_damage += agent.flood_damage_monetary_value
-        print(self.total_damage)
+        # for agent in self.schedule.agents:
+        #     if isinstance(agent, Households):
+        #     # Calculate the actual flood depth as a random number between 0.5 and 1.2 times the estimated flood depth
+        #         agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
+        #     # calculate the actual flood damage given the actual flood depth
+        #         agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
+        #         agent.flood_damage_monetary_value = agent.flood_damage_actual*self.max_damage_dol_per_sqm
+        #         self.total_damage += agent.flood_damage_monetary_value
+        # print(self.total_damage)
 
 
         if self.schedule.steps == 5:
@@ -234,7 +233,7 @@ class AdaptationModel(Model):
                     # calculate the actual flood damage given the actual flood depth
                     agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
                     agent.flood_damage_final += max(agent.flood_damage_actual-agent.taken_measures,0) * agent.size_of_house * agent.max_damage_dol_per_sqm
-                    agent.whatif_damage =+ agent.flood_damage_actual * agent.size_of_house * agent.max_damage_dol_per_sqm
+                    agent.whatif_damage += agent.flood_damage_actual * agent.size_of_house * agent.max_damage_dol_per_sqm
         # Collect data and advance the model by one step
         self.datacollector.collect(self)
         # for agent in self.schedule:
