@@ -1,10 +1,12 @@
 # Importing necessary libraries
 import random
+import rasterio as rs
 from mesa import Agent
 from shapely.geometry import Point
 from shapely import contains_xy
 
 # Import functions from functions.py
+from functions import get_flood_map_data
 from functions import generate_random_location_within_map_domain, get_flood_depth, calculate_basic_flood_damage
 from functions import floodplain_multipolygon
 
@@ -32,16 +34,27 @@ class Households(Agent):
             self.in_floodplain = True
 
         # Get the estimated flood depth at those coordinates. 
-        # the estimated flood depth is calculated based on the flood map (i.e., past data) so this is not the actual flood depth
+        # the estimated flood depth is calculated based on the flood map (i.e., past data) so this is not the
+        # actual flood depth
         # Flood depth can be negative if the location is at a high elevation
         self.flood_depth_estimated = get_flood_depth(corresponding_map=model.flood_map, location=self.location,
                                                      band=model.band_flood_img)
+
+        flood_map_paths = {'harvey': r'../input_data/floodmaps/Harvey_depth_meters.tif',}
+        flood_map_path = flood_map_paths['harvey']
+        self.flood_map = rs.open(flood_map_path)
+        self.band_flood_img, self.bound_left, self.bound_right, self.bound_top, self.bound_bottom = get_flood_map_data(
+            self.flood_map)
+
+        self.flood_depth_Harvey = get_flood_depth(corresponding_map=self.flood_map, location=self.location,
+                                                     band=self.band_flood_img)
         # handle negative values of flood depth
         if self.flood_depth_estimated < 0:
             self.flood_depth_estimated = 0
 
         # calculate the estimated flood damage given the estimated flood depth. Flood damage is a factor between 0 and 1
-        self.flood_damage_estimated = calculate_basic_flood_damage(flood_depth=self.flood_depth_estimated)
+        self.flood_damage_estimated = calculate_basic_flood_damage(flood_depth=get_flood_depth(corresponding_map=model.flood_map, location=self.location,
+                                                     band=model.band_flood_img))
 
         # Add an attribute for the actual flood depth. This is set to zero at the beginning of the simulation since there is not flood yet
         # and will update its value when there is a shock (i.e., actual flood). Shock happens at some point during the simulation
@@ -50,6 +63,7 @@ class Households(Agent):
         # calculate the actual flood damage given the actual flood depth. Flood damage is a factor between 0 and 1
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
         self.flood_damage_final = 0
+        self.whatif_damage = 0
         self.discount_rate = 0.98
         self.elevation_costs_per_square_metre = 300
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
@@ -63,7 +77,7 @@ class Households(Agent):
 
         self.trust_factor = random.uniform(0,0.1)
         self.fine = fine
-        self.taken_measures = random.random()
+        self.taken_measures = random.triangular(0,0.8,0.1)
         self.perceived_flood_probability = random.random()
         self.perceived_costs_of_measures = self.elevation_costs_per_square_metre * self.size_of_house
         self.perceived_flood_damage = None
@@ -178,7 +192,7 @@ class Government(Agent):
 
         self.flood_warning = "Low"
         self.subsidies = 0
-        self.regulations = 0.4
+        self.regulations = 0.2
         self.infrastructure = 0
         loc_x, loc_y = generate_random_location_within_map_domain()
         self.location = Point(loc_x, loc_y)
@@ -206,8 +220,9 @@ class Government(Agent):
     def count_friends(self, radius):
         #to fix the reporting
         return None
+    #you are certified if you have a lower flood damage than the regulation. The harvey flood is used as a baseline.
     def complies_with_certification(self, household):
-        if household.taken_measures >= self.regulations:
+        if calculate_basic_flood_damage(flood_depth= household.flood_depth_Harvey) - household.taken_measures <= self.regulations:
             return True
         else:
             return False
@@ -222,10 +237,11 @@ class Government(Agent):
             self.fine_household(household)
 
     def check_all_households(self):
-        # mogelijk if statement maken dat dit bij bepaalde time steps gedaan wordt
+        #There is a chance for every household that they are checked.
         for household in self.household_list:
             if isinstance(household, Households):
-                self.check_certification(household)
+                if random.random() < 0.3:
+                    self.check_certification(household)
 
     def step(self):
         self.check_all_households()

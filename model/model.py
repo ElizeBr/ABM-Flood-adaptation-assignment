@@ -48,7 +48,7 @@ class AdaptationModel(Model):
         
         super().__init__(seed = seed)
 
-        self.total_damage = 0
+        self.total_damage = 0.0
         # defining the variables and setting the values
         self.number_of_households = number_of_households  # Total number of household agents
         self.seed = seed
@@ -88,6 +88,7 @@ class AdaptationModel(Model):
         model_metrics = {
                         "total_adapted_households": self.total_adapted_households,
                         "total_flood_damage": self.total_flood_damage,
+                        "whatif_damage": self.whatif_damage,
             # ... other reporters ...""
                         }
         
@@ -171,6 +172,12 @@ class AdaptationModel(Model):
         #BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING "ISINSTANCE"
         total_damage = sum([agent.flood_damage_final for agent in self.schedule.agents if isinstance(agent, Households)])
         return total_damage
+
+    def whatif_damage(self):
+        """Return the total number of households that have adapted."""
+        #BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING "ISINSTANCE"
+        whatif_damage = sum([agent.whatif_damage for agent in self.schedule.agents if isinstance(agent, Households)])
+        return whatif_damage
     def plot_model_domain_with_agents(self):
         fig, ax = plt.subplots()
         # Plot the model domain
@@ -226,7 +233,8 @@ class AdaptationModel(Model):
                     agent.flood_depth_actual = random.uniform(0.5, 1.2) * agent.flood_depth_estimated
                     # calculate the actual flood damage given the actual flood depth
                     agent.flood_damage_actual = calculate_basic_flood_damage(agent.flood_depth_actual)
-        
+                    agent.flood_damage_final += max(agent.flood_damage_actual-agent.taken_measures,0) * agent.size_of_house * agent.max_damage_dol_per_sqm
+                    agent.whatif_damage =+ agent.flood_damage_actual * agent.size_of_house * agent.max_damage_dol_per_sqm
         # Collect data and advance the model by one step
         self.datacollector.collect(self)
         # for agent in self.schedule:
