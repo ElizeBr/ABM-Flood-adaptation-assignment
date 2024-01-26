@@ -91,17 +91,10 @@ class Households(Agent):
         return len(friends)
 
     def save_money(self):
-        # print("Money before savings:" + str(self.money_saved))
-        # print("Income" + str(self.income))
         self.money_saved += self.income * 0.05
-        # print("Money saved after one round: " + str(self.money_saved))
 
     def construct_perceived_flood_probability(self):
         neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-
-        # neighbor_ids = [neighbor.unique_id for neighbor in neighbors]
-        # print(f"Neighbors of agent {self.unique_id}: {neighbor_ids}")
-
         self.perceived_flood_probability = self.discount_rate * self.perceived_flood_probability
         for neighbor in neighbors:
             if isinstance(neighbor, Households):
@@ -109,17 +102,12 @@ class Households(Agent):
                     self.perceived_flood_probability * (1 - neighbor.trust_factor) +
                     neighbor.trust_factor * neighbor.perceived_flood_probability)
 
-            #government doet ook hier iets voor, maar dan in de government agent
-
     def construct_perceived_flood_damage(self):
         self.perceived_flood_damage = self.size_of_house * self.max_damage_dol_per_sqm * self.flood_damage_estimated
-        # print("Flood depth:" + str(self.flood_depth_estimated))
-        #print("Flood damage:" + str(self.perceived_flood_damage))
 
     def construct_perceived_effectiveness_of_measures(self):
-        # effectiveness ratio: costs of measures divided by damage reduction
-        # when above 1, thought to be effective
-        # fine is multiplied by 8 to show that households take into account that fines are fines multiple times
+        # effectiveness ratio: damage reduction and fine divided by costs of measures
+        # fine is multiplied by 5 to show that households take into account that fines are fines multiple times
         self.perceived_effectiveness_of_measures = ((self.perceived_flood_damage + self.fine*5) / self.perceived_costs_of_measures)
 
     def reconsider_adaptation_measures(self):
@@ -135,16 +123,8 @@ class Households(Agent):
             self.desire_to_take_measures = True
         else:
             self.desire_to_take_measures = False
-        ## willen we nog een fine over een tijd, dus dat de fine bijv 10 keer meeteld omdat je dan 1- jaar een fine betaald?
-        adaptation_treshold = 1.2
-        leaning_towards_adaptation = (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures
-        #print(f"probability: {self.perceived_flood_probability}")
-        #print(f"flood damage: {self.perceived_flood_damage}")
-        #print(f"cost of measures: {self.perceived_costs_of_measures}")
-        #print(f"effectiveness: {self.perceived_effectiveness_of_measures}")
-        #print(f"leaning towards measures:{leaning_towards_adaptation}")
-        # if (self.perceived_flood_probability*2) * self.perceived_effectiveness_of_measures >= adaptation_treshold: #flood probability is multiplied by 2 so that is has more or less equal influence in the decissionmaking as the effectiveness
-        #     self.desire_to_take_measures = True
+
+        # adaptation_tresshold = 1.2
         # #if self.perceived_flood_probability * self.perceived_flood_damage - self.perceived_costs_of_measures + self.fine  >= treshold:
         #
         # else:
@@ -177,43 +157,31 @@ class Households(Agent):
         if self.taken_measures > 0.8:
             self.is_adapted = True
 
-        #print(f"Desire to take measure: {self.desire_to_take_measures}")
-        #print(f"Adapted: {self.is_adapted}")
-
 # Define the Government agent class
 class Government(Agent):
     """
     A government agent that currently doesn't perform any actions.
     """
 
-    def __init__(self, unique_id, model, fine = 0):
+    def __init__(self, unique_id, model, fine = 0, flood_warning=0):
         super().__init__(unique_id, model)
 
         self.flood_warning = "Medium"
-        self.subsidies = 0
         self.regulations = 0.2
-        self.infrastructure = 0
         loc_x, loc_y = generate_random_location_within_map_domain()
         self.location = Point(loc_x, loc_y)
         self.fine = fine
+        self.flood_warning = flood_warning
         self.household_list= []
         self.fined_household_list= []
         self.fined_total = 0
         self.step_counter = 0
     def warn_households(self, schedule_of_households): #gebruik een list van de households, schedule voor volgorde.
-        flood_warning_effectiveness = 0
-        if self.flood_warning == "Low":
-            flood_warning_effectiveness = 0
-        elif self.flood_warning == "Medium":
-            flood_warning_effectiveness = 0.1
-        elif self.flood_warning == "High":
-            flood_warning_effectiveness = 0.2
-
         for agent in schedule_of_households:
             if isinstance(agent, Households):
                 agent.perceived_flood_probability = (
-                    agent.perceived_flood_probability * (1 - flood_warning_effectiveness) +
-                    flood_warning_effectiveness)
+                    agent.perceived_flood_probability * (1 - self.flood_warning) +
+                    self.flood_warning)
 
     def count_friends(self, radius):
         #to fix the reporting
@@ -246,7 +214,7 @@ class Government(Agent):
         if (self.step_counter+1) % 8 == 0:
             self.check_all_households()
 
-        if (self.step_counter+1) % 10 == 0:
+        if self.step_counter % 10 == 0:
             self.warn_households(self.household_list)
 
 # define Insurance agent

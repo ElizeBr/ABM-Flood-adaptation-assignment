@@ -1,8 +1,8 @@
 from model import AdaptationModel
+from mesa.batchrunner import batch_run
 
 
 if __name__ == "__main__":
     empty_model = AdaptationModel()
-    for i in range(30):
-        empty_model.step()
 
+    empty_model.step()

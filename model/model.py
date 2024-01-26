@@ -43,7 +43,8 @@ class AdaptationModel(Model):
                  number_of_edges = 3,
                  # number of nearest neighbours for WS social network
                  number_of_nearest_neighbours = 5,
-                 fine = 1000
+                 fine = 1000,
+                 flood_warning= 0.3
                  ):
 
         super().__init__(seed = seed)
@@ -54,6 +55,8 @@ class AdaptationModel(Model):
         self.seed = seed
         self.max_damage_dol_per_sqm = max_damage_dol_per_sqm
         self.fine=fine
+        self.flood_warning=flood_warning
+
         # network
         self.network = network # Type of network to be created
         self.probability_of_network_connection = probability_of_network_connection
@@ -79,7 +82,7 @@ class AdaptationModel(Model):
             self.schedule.add(household)
             self.grid.place_agent(agent=household, node_id=node)
 
-        government_agent = Government(unique_id=100, model=self,fine= self.fine)
+        government_agent = Government(unique_id=100, model=self,fine= self.fine, flood_warning=self.flood_warning)
         government_agent.household_list = self.schedule.agents
         self.schedule.add(government_agent)
         self.grid.place_agent(agent=government_agent, node_id=2)
@@ -176,8 +179,6 @@ class AdaptationModel(Model):
         return total_damage
 
     def whatif_damage(self):
-        """Return the total number of households that have adapted."""
-        #BE CAREFUL THAT YOU MAY HAVE DIFFERENT AGENT TYPES SO YOU NEED TO FIRST CHECK IF THE AGENT IS ACTUALLY A HOUSEHOLD AGENT USING "ISINSTANCE"
         whatif_damage = sum([agent.whatif_damage for agent in self.schedule.agents if isinstance(agent, Households)])
         return whatif_damage
     def plot_model_domain_with_agents(self):
