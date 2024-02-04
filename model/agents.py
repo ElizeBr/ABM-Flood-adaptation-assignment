@@ -19,7 +19,7 @@ class Households(Agent):
     In a real scenario, this would be based on actual geographical data or more complex logic.
     """
 
-    def __init__(self, unique_id, model, fine=0):
+    def __init__(self, unique_id, model, fine=0, discount_rate=0.99, max_trust_value=0.1):
         super().__init__(unique_id, model)
         self.is_adapted = False  # Initial adaptation status set to False
 
@@ -64,7 +64,7 @@ class Households(Agent):
         self.flood_damage_actual = calculate_basic_flood_damage(flood_depth=self.flood_depth_actual)
         self.flood_damage_final = 0
         self.whatif_damage = 0
-        self.discount_rate = 0.99
+        self.discount_rate = discount_rate
         self.elevation_costs_per_square_metre = 290
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
 
@@ -75,7 +75,7 @@ class Households(Agent):
         # start value of saved money (we could also randomize the 1.8)
         self.money_saved = self.income * 1.8
 
-        self.trust_factor = random.uniform(0,0.1)
+        self.trust_factor = random.uniform(0,max_trust_value)
         self.fine = fine
         self.taken_measures = random.triangular(0,0.8,0.1)
         self.perceived_flood_probability = random.random()

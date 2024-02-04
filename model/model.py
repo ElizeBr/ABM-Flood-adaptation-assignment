@@ -27,24 +27,26 @@ class AdaptationModel(Model):
 
     def __init__(self,
                  seed = None,
-                 number_of_households = 25, # number of household agents
+                 number_of_households=25, # number of household agents
                  # flood damage related: from Huizinga, de Moel --> damage factor
                  # in dollar and adjusted for inflation to 2020 value
-                 max_damage_dol_per_sqm = 1216.65,
+                 max_damage_dol_per_sqm=1216.65,
                  # Simplified argument for choosing flood map. Can currently be "harvey", "100yr", or "500yr".
                  flood_map_choice='harvey',
                  # ### network related parameters ###
                  # The social network structure that is used.
                  # Can currently be "erdos_renyi", "barabasi_albert", "watts_strogatz", or "no_network"
-                 network = 'watts_strogatz',
+                 network='watts_strogatz',
                  # likeliness of edge being created between two nodes
-                 probability_of_network_connection = 0.4,
+                 probability_of_network_connection=0.4,
                  # number of edges for BA network
-                 number_of_edges = 3,
+                 number_of_edges=3,
                  # number of nearest neighbours for WS social network
-                 number_of_nearest_neighbours = 5,
-                 fine = 1000,
-                 flood_warning= 0.3
+                 number_of_nearest_neighbours=5,
+                 fine=1000,
+                 flood_warning=0.3,
+                 discount_rate=0.99,
+                 max_trust_value=0.1
                  ):
 
         super().__init__(seed = seed)
@@ -54,8 +56,10 @@ class AdaptationModel(Model):
         self.number_of_households = number_of_households  # Total number of household agents
         self.seed = seed
         self.max_damage_dol_per_sqm = max_damage_dol_per_sqm
-        self.fine=fine
-        self.flood_warning=flood_warning
+        self.fine = fine
+        self.discount_rate = discount_rate
+        self.max_trust_value = max_trust_value
+        self.flood_warning = flood_warning
 
         # network
         self.network = network # Type of network to be created
@@ -78,7 +82,7 @@ class AdaptationModel(Model):
 
         # create households through initiating a household on each node of the network graph
         for i, node in enumerate(self.G.nodes()):
-            household = Households(unique_id=i, model=self, fine= self.fine)
+            household = Households(unique_id=i, model=self, fine= self.fine, discount_rate=self.discount_rate, max_trust_value=self.max_trust_value)
             self.schedule.add(household)
             self.grid.place_agent(agent=household, node_id=node)
 
