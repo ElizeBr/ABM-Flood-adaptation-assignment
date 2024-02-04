@@ -19,7 +19,7 @@ class Households(Agent):
     In a real scenario, this would be based on actual geographical data or more complex logic.
     """
 
-    def __init__(self, unique_id, model, fine=0, discount_rate=0.99, max_trust_value=0.1):
+    def __init__(self, unique_id, model, fine=0, discount_rate=0.99, max_trust_value=0.1, elevation_costs_per_square_metre=290):
         super().__init__(unique_id, model)
         self.is_adapted = False  # Initial adaptation status set to False
 
@@ -65,7 +65,7 @@ class Households(Agent):
         self.flood_damage_final = 0
         self.whatif_damage = 0
         self.discount_rate = discount_rate
-        self.elevation_costs_per_square_metre = 290
+        self.elevation_costs_per_square_metre = elevation_costs_per_square_metre
         self.max_damage_dol_per_sqm = 1216.65  # extracted from model file
 
         # range around average house size (159.14 square meters)

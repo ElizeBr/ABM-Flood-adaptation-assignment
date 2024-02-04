@@ -44,9 +44,10 @@ class AdaptationModel(Model):
                  # number of nearest neighbours for WS social network
                  number_of_nearest_neighbours=5,
                  fine=1000,
-                 flood_warning=0.3,
+                 flood_warning=0.15,
                  discount_rate=0.99,
-                 max_trust_value=0.1
+                 max_trust_value=0.1,
+                elevation_costs_per_square_metre=290,
                  ):
 
         super().__init__(seed = seed)
@@ -60,6 +61,7 @@ class AdaptationModel(Model):
         self.discount_rate = discount_rate
         self.max_trust_value = max_trust_value
         self.flood_warning = flood_warning
+        self.elevation_costs_per_square_metre= elevation_costs_per_square_metre
 
         # network
         self.network = network # Type of network to be created
@@ -82,7 +84,8 @@ class AdaptationModel(Model):
 
         # create households through initiating a household on each node of the network graph
         for i, node in enumerate(self.G.nodes()):
-            household = Households(unique_id=i, model=self, fine= self.fine, discount_rate=self.discount_rate, max_trust_value=self.max_trust_value)
+            household = Households(unique_id=i, model=self, fine= self.fine, discount_rate=self.discount_rate,
+                                   max_trust_value=self.max_trust_value, elevation_costs_per_square_metre=self.elevation_costs_per_square_metre)
             self.schedule.add(household)
             self.grid.place_agent(agent=household, node_id=node)
 
